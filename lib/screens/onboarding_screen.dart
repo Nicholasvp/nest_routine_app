@@ -1,0 +1,443 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../providers/baby_provider.dart';
+import '../providers/locale_provider.dart';
+import '../theme/app_colors.dart';
+import '../utils/storage_service.dart';
+import '../utils/strings.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final _pageController = PageController();
+  int _currentPage = 0;
+  final _nameController = TextEditingController();
+  DateTime _dob = DateTime.now().subtract(const Duration(days: 30));
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.watch<LocaleProvider>().strings;
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (p) => setState(() => _currentPage = p),
+                children: [
+                  _buildIntroPage(context, strings),
+                  _buildFeaturesPage(context, strings),
+                  _buildSetupPage(context, strings),
+                ],
+              ),
+            ),
+            _buildBottomNavigation(context, strings),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIntroPage(BuildContext context, Strings strings) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const RadialGradient(
+                colors: [
+                  AppColors.sleepPurple,
+                  AppColors.darkPurple,
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.sleepPurple.withValues(alpha: 0.3),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.nightlight_round,
+              size: 56,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 40),
+          Text(
+            strings.appName,
+            style: const TextStyle(
+              fontSize: 38,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -1,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            strings.understandYourBaby,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+          _LanguageSelector(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesPage(BuildContext context, Strings strings) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _FeatureItem(
+            icon: Icons.nightlight_round,
+            color: AppColors.sleepPurple,
+            title: strings.wePredictSleep,
+            description: strings.wePredictSleepDesc,
+          ),
+          const SizedBox(height: 28),
+          _FeatureItem(
+            icon: Icons.touch_app_rounded,
+            color: AppColors.feedOrange,
+            title: strings.logOneTap,
+            description: strings.logOneTapDesc,
+          ),
+          const SizedBox(height: 28),
+          _FeatureItem(
+            icon: Icons.notifications_active_outlined,
+            color: AppColors.diaperTeal,
+            title: strings.notificationsRightTime,
+            description: strings.notificationsRightTimeDesc,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSetupPage(BuildContext context, Strings strings) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            strings.setupYourBaby,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            strings.setupSubtitle,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 32),
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: strings.babysName,
+              hintText: strings.nameHint,
+              prefixIcon: const Icon(Icons.baby_changing_station_outlined,
+                  color: AppColors.textTertiary),
+            ),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
+            autofocus: true,
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _dob,
+                firstDate:
+                    DateTime.now().subtract(const Duration(days: 365 * 3)),
+                lastDate: DateTime.now(),
+                builder: (context, child) => Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.dark(
+                      primary: AppColors.sleepPurple,
+                      surface: AppColors.darkPurple,
+                    ),
+                  ),
+                  child: child!,
+                ),
+              );
+              if (picked != null) setState(() => _dob = picked);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_month_outlined,
+                      color: AppColors.textTertiary, size: 24),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(strings.dateOfBirth,
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('MMMM d, yyyy').format(_dob),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: AppColors.textTertiary),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigation(BuildContext context, Strings strings) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (index) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: _currentPage == index ? 24 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? AppColors.sleepPurple
+                      : AppColors.textTertiary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _currentPage < 2
+                  ? () => _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      )
+                  : _completeOnboarding,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.sleepPurple,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 56),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                elevation: 4,
+              ),
+              child: Text(
+                _currentPage < 2 ? strings.next : strings.getStarted,
+                style: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+          if (_currentPage < 2)
+            TextButton(
+              onPressed: _completeOnboarding,
+              child: Text(
+                strings.skipSetup,
+                style: const TextStyle(
+                    color: AppColors.textTertiary, fontSize: 14),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _completeOnboarding() {
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      context.read<BabyProvider>().addBaby(name, _dob);
+    }
+    StorageService.setOnboardingComplete(true);
+    Navigator.of(context).pushReplacementNamed('/home');
+  }
+}
+
+class _LanguageSelector extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
+    final strings = localeProvider.strings;
+    return GestureDetector(
+      onTap: () => _showLanguagePicker(context, localeProvider),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.language_outlined,
+                size: 20, color: AppColors.textSecondary),
+            const SizedBox(width: 10),
+            Text(
+              localeProvider.isPortuguese ? strings.portuguese : strings.english,
+              style: const TextStyle(
+                  color: AppColors.textPrimary, fontSize: 14),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguagePicker(BuildContext context, LocaleProvider localeProvider) {
+    final strings = context.read<LocaleProvider>().strings;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.language),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(strings.english),
+              leading: Radio<bool>(
+                value: false,
+                groupValue: localeProvider.isPortuguese,
+                onChanged: (_) {
+                  localeProvider.setLocale('en');
+                  Navigator.pop(ctx);
+                },
+                activeColor: AppColors.sleepPurple,
+              ),
+            ),
+            ListTile(
+              title: Text(strings.portuguese),
+              leading: Radio<bool>(
+                value: true,
+                groupValue: localeProvider.isPortuguese,
+                onChanged: (_) {
+                  localeProvider.setLocale('pt');
+                  Navigator.pop(ctx);
+                },
+                activeColor: AppColors.sleepPurple,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeatureItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String description;
+
+  const _FeatureItem({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
