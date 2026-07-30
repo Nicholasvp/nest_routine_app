@@ -16,6 +16,7 @@ import '../widgets/quick_action_bar.dart';
 import '../widgets/bottom_sheets/sleep_sheet.dart';
 import '../widgets/bottom_sheets/feed_sheet.dart';
 import '../widgets/bottom_sheets/diaper_sheet.dart';
+import '../widgets/bottom_sheets/bug_report_sheet.dart';
 import '../services/navigation_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -94,8 +95,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   children: [
                     _buildTimelineSection(
                         context, eventProvider, todayEvents, activeSleep),
+                    const SizedBox(height: 24),
                     _buildPredictionCards(
-                        context, nextNap, nextFeed, nextDiaper, totalSleep),
+                        context, nextNap, nextFeed, nextDiaper, totalSleep,
+                        onNapTap: () => _showSleepSheet(
+                            context, eventProvider, activeSleep),
+                        onFeedTap: () => _showFeedSheet(
+                            context, eventProvider, baby.id),
+                        onDiaperTap: () => _showDiaperSheet(
+                            context, eventProvider, baby.id, defaultPee: true),
+                      ),
                     const SizedBox(height: 12),
                     _SleepWindowBatteryWidget(
                       ageMonths: baby.ageInMonths,
@@ -106,6 +115,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _buildQuickActionSection(context, eventProvider, baby.id),
                     const SizedBox(height: 16),
                     _buildRecentEvents(context, eventProvider, baby.id, todayEvents),
+                    const SizedBox(height: 24),
+                    _buildBugReportLink(context),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -172,19 +183,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          SizedBox(
-            height: MediaQuery.of(context).size.width * 0.85,
-            child: CircularTimeline(
-              todayEvents: todayEvents,
-              activeSleep: activeSleep,
-              pulseScale: activeSleep != null ? _pulseAnimation.value : null,
-              onTap: () => _showSleepSheet(
-                  context, eventProvider, activeSleep),
-            ),
-          ),
-        ],
+      child: CircularTimeline(
+        todayEvents: todayEvents,
+        activeSleep: activeSleep,
+        pulseScale: activeSleep != null ? _pulseAnimation.value : null,
+        onTap: () =>
+            _showSleepSheet(context, eventProvider, activeSleep),
       ),
     );
   }
@@ -194,8 +198,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     PredictionResult nextNap,
     PredictionResult nextFeed,
     PredictionResult nextDiaper,
-    double totalSleep,
-  ) {
+    double totalSleep, {
+    VoidCallback? onNapTap,
+    VoidCallback? onFeedTap,
+    VoidCallback? onDiaperTap,
+  }) {
     final tr = context.watch<LocaleProvider>().strings;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -210,6 +217,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   value: nextNap.timeUntilLabel,
                   color: AppColors.sleepPurple,
                   confidence: nextNap.confidencePercent,
+                  onTap: onNapTap,
                 ),
               ),
               const SizedBox(width: 10),
@@ -220,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   value: nextFeed.timeUntilLabel,
                   color: AppColors.feedOrange,
                   confidence: nextFeed.confidencePercent,
+                  onTap: onFeedTap,
                 ),
               ),
             ],
@@ -234,6 +243,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   value: nextDiaper.timeUntilLabel,
                   color: AppColors.diaperTeal,
                   confidence: nextDiaper.confidencePercent,
+                  onTap: onDiaperTap,
                 ),
               ),
               const SizedBox(width: 10),
@@ -364,6 +374,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         onStopSleep: (endTime) {
           eventProvider.stopSleepTimer(babyId, endTime: endTime);
         },
+        onQuickLog: (startTime, endTime) {
+          final event = BabyEvent(
+            id: const Uuid().v4(),
+            babyId: babyId,
+            type: EventType.sleep,
+            startTime: startTime,
+            endTime: endTime,
+            durationMinutes: endTime.difference(startTime).inMinutes,
+          );
+          eventProvider.addEvent(event);
+        },
       ),
     );
   }
@@ -395,8 +416,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             eventProvider.addEvent(event);
           }
         },
-        onStopNursing: (endTime, feedSide) {
-          eventProvider.stopFeedTimer(babyId, endTime: endTime, feedSide: feedSide);
+        onStopNursing: (endTime, feedSide, {startTime}) {
+          eventProvider.stopFeedTimer(babyId, endTime: endTime, feedSide: feedSide, startTime: startTime);
         },
         onLogFeed: (event) {
           final completeEvent = event.copyWith(
@@ -404,6 +425,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             babyId: babyId,
           );
           eventProvider.addEvent(completeEvent);
+        },
+        onTimerFeedSideChanged: (feedSide) {
+          eventProvider.updateTimerFeedSide(babyId, feedSide);
         },
       ),
     );
@@ -456,7 +480,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           builder: (_) => FeedSheet(
             event: event,
             onStartNursing: (_, __) {},
-            onStopNursing: (_, __) {},
+            onStopNursing: (_, __, {startTime}) {},
             onLogFeed: (_) {},
             onUpdateFeed: (updated) {
               eventProvider.updateEvent(updated);
@@ -479,6 +503,45 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         );
     }
+  }
+
+  Widget _buildBugReportLink(BuildContext context) {
+    final tr = context.watch<LocaleProvider>().strings;
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const BugReportSheet(),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.bug_report_outlined,
+                size: 16, color: AppColors.error.withValues(alpha: 0.7)),
+            const SizedBox(width: 8),
+            Text(
+              tr.reportBugHome,
+              style: TextStyle(
+                color: AppColors.error.withValues(alpha: 0.8),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _confirmDelete(
@@ -552,6 +615,7 @@ class _PredictionCard extends StatelessWidget {
   final String value;
   final Color color;
   final int confidence;
+  final VoidCallback? onTap;
 
   const _PredictionCard({
     required this.icon,
@@ -559,57 +623,61 @@ class _PredictionCard extends StatelessWidget {
     required this.value,
     required this.color,
     required this.confidence,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final tr = context.watch<LocaleProvider>().strings;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.textSecondary.withValues(alpha: 0.8),
-                    fontSize: 11,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
+                      fontSize: 11,
+                    ),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (confidence > 0) ...[
+              const SizedBox(height: 2),
+              Text(
+                tr.percentConfidence(confidence),
+                style: TextStyle(
+                  color: AppColors.textTertiary.withValues(alpha: 0.6),
+                  fontSize: 9,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (confidence > 0) ...[
-            const SizedBox(height: 2),
-            Text(
-              tr.percentConfidence(confidence),
-              style: TextStyle(
-                color: AppColors.textTertiary.withValues(alpha: 0.6),
-                fontSize: 9,
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

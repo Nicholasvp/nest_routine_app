@@ -70,6 +70,19 @@ class BabyEvent {
     }
   }
 
+  String localizedTypeLabel(dynamic strings) {
+    switch (type) {
+      case EventType.sleep:
+        return strings.eventTypeSleep;
+      case EventType.feed:
+        return strings.eventTypeFeed;
+      case EventType.pee:
+        return hasPoop ? strings.eventTypePeeAndPoop : strings.eventTypePee;
+      case EventType.poop:
+        return strings.eventTypePoop;
+    }
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'babyId': babyId,

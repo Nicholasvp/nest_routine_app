@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import '../models/event.dart';
 import '../utils/prediction_engine.dart';
 import '../utils/storage_service.dart';
+import '../services/widget_service.dart';
+import '../services/auth_service.dart';
+import '../services/sync_service.dart';
 import 'notification_provider.dart';
 
 class EventProvider extends ChangeNotifier {
@@ -13,12 +17,17 @@ class EventProvider extends ChangeNotifier {
   BabyEvent? _activeSleepTimer;
   BabyEvent? _activeFeedTimer;
   NotificationProvider? _notificationProvider;
+  SyncService? _syncService;
 
   BabyEvent? get activeSleepTimer => _activeSleepTimer;
   BabyEvent? get activeFeedTimer => _activeFeedTimer;
 
   void setNotificationProvider(NotificationProvider provider) {
     _notificationProvider = provider;
+  }
+
+  void initSyncService(AuthService authService) {
+    _syncService = SyncService(authService);
   }
 
   List<BabyEvent> getEvents(String babyId) {
@@ -67,19 +76,84 @@ class EventProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _refreshWidget(String babyId, {String? babyName}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final name = babyName ?? 'Baby';
+      final events = _eventsByBaby[babyId] ?? [];
+      WidgetService.updateFromEventData(
+        babyName: name,
+        activeSleep: _activeSleepTimer,
+        activeFeed: _activeFeedTimer,
+        events: events,
+        totalSleepToday: getTotalSleepToday(babyId),
+      );
+    });
+  }
+
   void _updateActiveTimers(String babyId) {
-    final events = _eventsByBaby[babyId] ?? [];
-    final ongoing = events.where((e) => e.isOngoing).toList();
-    _activeSleepTimer = ongoing.where((e) => e.type == EventType.sleep).firstOrNull;
-    _activeFeedTimer = ongoing.where((e) => e.type == EventType.feed).firstOrNull;
+    final events = _eventsByBaby[babyId];
+    if (events == null || events.isEmpty) {
+      _activeSleepTimer = null;
+      _activeFeedTimer = null;
+      _updateTickTimerState();
+      return;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    bool needsSave = false;
+
+    for (int i = 0; i < events.length; i++) {
+      final event = events[i];
+      if (!event.isOngoing) continue;
+
+      if (event.startTime.isBefore(today)) {
+        events[i] = event.copyWith(endTime: today);
+        needsSave = true;
+      } else if (event.type == EventType.feed &&
+          now.difference(event.startTime).inMinutes >= 60) {
+        events[i] = event.copyWith(
+          endTime: event.startTime.add(const Duration(hours: 1)),
+          durationMinutes: 60,
+        );
+        needsSave = true;
+      }
+    }
+
+    if (needsSave) {
+      StorageService.saveEvents(babyId, events);
+    }
+
+    final ongoing = events
+        .where((e) => e.isOngoing && !e.startTime.isBefore(today))
+        .toList();
+    _activeSleepTimer =
+        ongoing.where((e) => e.type == EventType.sleep).firstOrNull;
+    _activeFeedTimer =
+        ongoing.where((e) => e.type == EventType.feed).firstOrNull;
     _updateTickTimerState();
   }
 
   void _startTickTimer() {
     _tickTimer?.cancel();
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _autoStopFeedIfNeeded();
       notifyListeners();
     });
+  }
+
+  void _autoStopFeedIfNeeded() {
+    if (_activeFeedTimer == null) return;
+    if (DateTime.now().difference(_activeFeedTimer!.startTime).inMinutes >=
+        60) {
+      stopFeedTimer(
+        _activeFeedTimer!.babyId,
+        endTime:
+            _activeFeedTimer!.startTime.add(const Duration(hours: 1)),
+        feedSide: _activeFeedTimer!.feedSide,
+        durationMinutes: 60,
+      );
+    }
   }
 
   void _stopTickTimer() {
@@ -92,7 +166,9 @@ class EventProvider extends ChangeNotifier {
     _eventsByBaby[event.babyId]!.insert(0, event);
     _updateActiveTimers(event.babyId);
     await StorageService.saveEvents(event.babyId, _eventsByBaby[event.babyId]!);
+    _syncService?.syncEventToSupabase(event);
     notifyListeners();
+    _refreshWidget(event.babyId);
 
     _notificationProvider?.onEventAdded(
       events: _eventsByBaby[event.babyId] ?? [],
@@ -111,7 +187,9 @@ class EventProvider extends ChangeNotifier {
     _activeSleepTimer = event;
     _startTickTimer();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
+    _syncService?.syncEventToSupabase(event);
     notifyListeners();
+    _refreshWidget(babyId);
     return event;
   }
 
@@ -128,7 +206,9 @@ class EventProvider extends ChangeNotifier {
       _activeSleepTimer = null;
     _updateTickTimerState();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
+    _syncService?.syncEventToSupabase(updated);
     notifyListeners();
+    _refreshWidget(babyId);
   }
 
   Future<BabyEvent> startFeedTimer(String babyId) async {
@@ -144,29 +224,49 @@ class EventProvider extends ChangeNotifier {
     _activeFeedTimer = event;
     _startTickTimer();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
+    _syncService?.syncEventToSupabase(event);
     notifyListeners();
+    _refreshWidget(babyId);
     return event;
   }
 
-  Future<void> stopFeedTimer(String babyId, {DateTime? endTime, FeedSide? feedSide, int? durationMinutes}) async {
+  Future<void> updateTimerFeedSide(String babyId, FeedSide feedSide) async {
     if (_activeFeedTimer == null) return;
     final index = _eventsByBaby[babyId]
             ?.indexWhere((e) => e.id == _activeFeedTimer!.id) ??
         -1;
     if (index == -1) return;
+    final updated = _activeFeedTimer!.copyWith(feedSide: feedSide);
+    _eventsByBaby[babyId]![index] = updated;
+    _activeFeedTimer = updated;
+    await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
+    notifyListeners();
+    _refreshWidget(babyId);
+  }
+
+  Future<void> stopFeedTimer(String babyId, {DateTime? endTime, FeedSide? feedSide, int? durationMinutes, DateTime? startTime}) async {
+    if (_activeFeedTimer == null) return;
+    final index = _eventsByBaby[babyId]
+            ?.indexWhere((e) => e.id == _activeFeedTimer!.id) ??
+        -1;
+    if (index == -1) return;
+    final adjustedStart = startTime ?? _activeFeedTimer!.startTime;
     final updated = _activeFeedTimer!.copyWith(
+      startTime: adjustedStart,
       endTime: endTime ?? DateTime.now(),
       feedSide: feedSide,
       durationMinutes: durationMinutes ??
           (endTime ?? DateTime.now())
-              .difference(_activeFeedTimer!.startTime)
+              .difference(adjustedStart)
               .inMinutes,
     );
     _eventsByBaby[babyId]![index] = updated;
     _activeFeedTimer = null;
     _updateTickTimerState();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
+    _syncService?.syncEventToSupabase(updated);
     notifyListeners();
+    _refreshWidget(babyId);
   }
 
   void _updateTickTimerState() {
@@ -182,7 +282,9 @@ class EventProvider extends ChangeNotifier {
     _updateActiveTimers(babyId);
     await StorageService.saveEvents(
         babyId, _eventsByBaby[babyId] ?? []);
+    _syncService?.deleteEventFromSupabase(eventId);
     notifyListeners();
+    _refreshWidget(babyId);
   }
 
   Future<void> updateEvent(BabyEvent event) async {
@@ -193,7 +295,9 @@ class EventProvider extends ChangeNotifier {
     events[index] = event;
     _updateActiveTimers(event.babyId);
     await StorageService.saveEvents(event.babyId, events);
+    _syncService?.syncEventToSupabase(event);
     notifyListeners();
+    _refreshWidget(event.babyId);
   }
 
   PredictionResult predictNextNap(String babyId) {

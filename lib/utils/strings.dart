@@ -115,6 +115,7 @@ class Strings {
   String get nursingNow => get('Nursing now', 'Mamando agora');
   String get stopNursing => get('Stop nursing', 'Parar de mamar');
   String get babyStartedNursing => get('Baby started nursing', 'Bebê começou a mamar');
+  String get breastfeedingSideDistribution => get('Breastfeeding Side Distribution', 'Distribuição Lateral da Mamada');
 
   // ── Diaper Sheet ──
   String get logDiaper => get('Log Diaper', 'Registrar Fralda');
@@ -216,4 +217,111 @@ class Strings {
     'Não foi possível carregar as opções de assinatura',
   );
   String get retry => get('Retry', 'Tentar novamente');
+
+  // ── Account ──
+  String get logout => get('Log Out', 'Sair');
+  String get logoutConfirm => get('Are you sure you want to log out?', 'Tem certeza de que deseja sair?');
+  String get account => get('Account', 'Conta');
+
+  // ── Nav Bar ──
+  String get navHome => get('Home', 'Início');
+  String get navHistory => get('History', 'Histórico');
+  String get navInsights => get('Insights', 'Insights');
+  String get navProfile => get('Profile', 'Perfil');
+
+  // ── Login ──
+  String get loginWelcomeBack => get('Welcome back!', 'Bem-vindo de volta!');
+  String get loginCreateAccount => get('Create your account', 'Crie sua conta');
+  String get loginEmail => get('Email', 'Email');
+  String get loginPassword => get('Password', 'Senha');
+  String get loginEmailRequired => get('Please enter your email', 'Por favor, digite seu email');
+  String get loginEmailInvalid => get('Please enter a valid email', 'Por favor, digite um email válido');
+  String get loginPasswordRequired => get('Please enter your password', 'Por favor, digite sua senha');
+  String get loginPasswordShort => get('Password must be at least 6 characters', 'A senha deve ter pelo menos 6 caracteres');
+  String get loginSignIn => get('Sign In', 'Entrar');
+  String get loginCreate => get('Create Account', 'Criar Conta');
+  String get loginSignUpLink => get("Don't have an account? Sign Up", 'Não tem conta? Criar');
+  String get loginSignInLink => get('Already have an account? Sign In', 'Já tem conta? Entrar');
+  String get loginSuccess => get('Login successful!', 'Login realizado com sucesso!');
+  String get loginAccountCreated => get('Account created! Check your email for verification.', 'Conta criada! Verifique seu email para confirmar.');
+  String get loginSyncInfo => get('Your data will be synced to the cloud', 'Seus dados serão sincronizados na nuvem');
+  String get loginUnexpectedError => get('An unexpected error occurred', 'Ocorreu um erro inesperado');
+
+  // ── Analytics ──
+  String get analytics => get('Analytics', 'Análises');
+  String get avgNapsPerDay => get('Avg naps/day', 'Média sonecas/dia');
+  String get todayLabel => get('Today', 'Hoje');
+  String get nextNapLabel => get('Next Nap', 'Próxima Soneca');
+  String get nextFeedLabel => get('Next Feed', 'Próxima Mamada');
+  String get nextDiaperLabel => get('Next Diaper', 'Próxima Fralda');
+  String get avgFeedsPerDay => get('Avg feeds/day', 'Média mamadas/dia');
+  String get avgInterval => get('Avg interval', 'Intervalo médio');
+  String get feedsPerDay => get('Feeds per Day', 'Mamadas por Dia');
+  String avgLabel(String val) => get('Avg: $val', 'Média: $val');
+  String feedsCount(int count) => get('$count feeds', '$count mamadas');
+  String get milkVolumePerDay => get('Milk Volume per Day', 'Volume de Leite por Dia');
+  String get avgDiapersPerDay => get('Avg diapers/day', 'Média fraldas/dia');
+  String totalDays(int d) => get('Total ($d d)', 'Total ($d d)');
+  String get peeOnly => get('Pee only', 'Só xixi');
+  String get diaperChangesPerDay => get('Diaper Changes per Day', 'Trocas de Fralda por Dia');
+  String changesCount(int count) => get('$count changes', '$count trocas');
+  String get peeVsPoopBreakdown => get('Pee vs Poop Breakdown', 'Detalhamento Xixi vs Cocô');
+  String peePercent(int pct) => get('$pct% Pee', '$pct% Xixi');
+  String bothPercent(int pct) => get('$pct% Both', '$pct% Ambos');
+  String poopPercent(int pct) => get('$pct% Poop', '$pct% Cocô');
+  String peeOnlyLabel(int count) => get('Pee only ($count)', 'Só xixi ($count)');
+  String bothLabel(int count) => get('Both ($count)', 'Ambos ($count)');
+  String poopOnlyLabel(int count) => get('Poop only ($count)', 'Só cocô ($count)');
+  String get stoolTexture => get('Stool Texture', 'Textura das Fezes');
+  String recommendedSleepFor(int months, double h) => get('Recommended sleep for ${months}mo: ${h}h', 'Sono recomendado para $months meses: ${h}h');
+  String confidence(int pct) => get('$pct% confidence', '$pct% de confiança');
+
+  // ── Paywall Features ──
+  String get featureAdvancedInsights => get('Advanced insights & analytics', 'Insights e análises avançados');
+  String get featureUnlimitedHistory => get('Unlimited history', 'Histórico ilimitado');
+  String get featureSmartPredictions => get('Smart predictions', 'Previsões inteligentes');
+  String get featureMultipleBabies => get('Multiple babies', 'Múltiplos bebês');
+  String get featureCloudBackup => get('Cloud backup', 'Backup na nuvem');
+  String get close => get('Close', 'Fechar');
+  String get noPurchasesFoundSimple => get('No purchases found', 'Nenhuma compra encontrada');
+
+  // ── Pro Gate ──
+  String get unlockInsights => get('Unlock Insights', 'Desbloquear Insights');
+  String get unlockInsightsDesc => get(
+    'Upgrade to Pro to see detailed analytics\nand predictions for your baby',
+    'Torne-se Pro para ver análises detalhadas\ne previsões do seu bebê',
+  );
+  String get unlockNotifications => get('Unlock Smart Notifications', 'Desbloquear Notificações Inteligentes');
+  String get unlockNotificationsDesc => get(
+    'Upgrade to Pro to configure smart\nnotification reminders',
+    'Torne-se Pro para configurar lembretes\nde notificação inteligentes',
+  );
+
+  // ── Event Types ──
+  String get eventTypeSleep => get('Sleep', 'Sono');
+  String get eventTypeFeed => get('Feed', 'Mamada');
+  String get eventTypePee => get('Pee', 'Xixi');
+  String get eventTypePoop => get('Poop', 'Cocô');
+  String get eventTypePeeAndPoop => get('Pee & Poop', 'Xixi & Cocô');
+
+  // ── Feed Sheet ──
+  String get startTime => get('Start', 'Início');
+  String get endTime => get('End', 'Fim');
+
+  // ── Bug Report ──
+  String get reportBug => get('Report a Bug', 'Reportar um Bug');
+  String get reportBugDesc => get('Describe the issue you found', 'Descreva o problema que encontrou');
+  String get bugTitle => get('Title', 'Título');
+  String get bugTitleHint => get('Brief summary of the issue', 'Resumo breve do problema');
+  String get bugDescription => get('Description', 'Descrição');
+  String get bugDescriptionHint => get('What happened? What did you expect?', 'O que aconteceu? O que você esperava?');
+  String get bugEmail => get('Email (optional)', 'Email (opcional)');
+  String get bugEmailHint => get('In case we need to contact you', 'Caso precisemos entrar em contato');
+  String get bugSubmit => get('Submit Report', 'Enviar Relatório');
+  String get bugSubmitting => get('Submitting...', 'Enviando...');
+  String get bugSuccess => get('Bug report sent! Thank you.', 'Relatório enviado! Obrigado.');
+  String get bugError => get('Failed to send report. Try again.', 'Falha ao enviar relatório. Tente novamente.');
+  String get bugTitleRequired => get('Please enter a title', 'Por favor, digite um título');
+  String get bugDescriptionRequired => get('Please describe the issue', 'Por favor, descreva o problema');
+  String get reportBugHome => get('Found a bug? Tell us', 'Encontrou um bug? Conte-nos');
 }

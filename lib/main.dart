@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/adapters/adapters.dart';
+import 'providers/auth_provider.dart';
 import 'providers/baby_provider.dart';
 import 'providers/event_provider.dart';
 import 'providers/locale_provider.dart';
@@ -13,18 +17,27 @@ import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/insights_screen.dart';
-import 'screens/paywall_screen.dart';
+
 import 'screens/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/login_screen.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'utils/storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/navigation_service.dart';
 import 'services/purchase_service.dart';
+import 'services/widget_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load();
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
 
   await Hive.initFlutter();
   Hive.registerAdapter(BabyAdapter());
@@ -36,11 +49,15 @@ void main() async {
   await StorageService.init();
 
   await NotificationService.initialize();
+  await WidgetService.init();
 
   try {
-    await PurchaseService.initialize('test_BpoJpIniStKnxSClbfrdieuFbYI');
+    await PurchaseService.initialize(
+      iosApiKey: 'test_BpoJpIniStKnxSClbfrdieuFbYI',
+      androidApiKey: 'test_BpoJpIniStKnxSClbfrdieuFbYI',
+    );
   } catch (e) {
-    debugPrint('RevenueCat init skipped: $e');
+    debugPrint('RevenueCat init failed: $e');
   }
 
   SystemChrome.setPreferredOrientations([
@@ -57,6 +74,7 @@ class NestRoutineApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) {
           final provider = BabyProvider();
           provider.loadBabies();
@@ -76,6 +94,9 @@ class NestRoutineApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) {
           final provider = SubscriptionProvider();
           provider.initialize();
+          Purchases.addCustomerInfoUpdateListener((info) {
+            provider.updateFromCustomerInfo(info);
+          });
           return provider;
         }),
       ],
@@ -103,18 +124,48 @@ class _AppNavigatorState extends State<_AppNavigator> {
 
   void _connectProviders() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<AuthProvider>();
+      final babyProvider = context.read<BabyProvider>();
       final eventProvider = context.read<EventProvider>();
       final notificationProvider = context.read<NotificationProvider>();
       final localeProvider = context.read<LocaleProvider>();
+
+      babyProvider.initSyncService(authProvider.authService);
+      eventProvider.initSyncService(authProvider.authService);
       eventProvider.setNotificationProvider(notificationProvider);
       notificationProvider.setLocaleProvider(localeProvider);
 
-      Purchases.addCustomerInfoUpdateListener((info) {
-        if (mounted) {
-          context.read<SubscriptionProvider>().updateCustomerInfo(info);
-        }
+      if (authProvider.isLoggedIn) {
+        babyProvider.loadBabiesFromCloud();
+      }
+
+      HomeWidget.widgetClicked.listen((uri) {
+        _handleWidgetAction(uri);
+      });
+
+      HomeWidget.initiallyLaunchedFromHomeWidget().then((uri) {
+        if (uri != null) _handleWidgetAction(uri);
       });
     });
+  }
+
+  void _handleWidgetAction(Uri? uri) {
+    if (uri == null || !mounted) return;
+    final action = uri.host;
+    switch (action) {
+      case 'sleep':
+        NavigationService.goToHome();
+        break;
+      case 'feed':
+        NavigationService.goToHome();
+        break;
+      case 'diaper':
+        NavigationService.goToHome();
+        break;
+      case 'wake':
+        NavigationService.goToHome();
+        break;
+    }
   }
 
   void _checkOnboarding() {
@@ -125,6 +176,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
   @override
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
+    final authProvider = context.watch<AuthProvider>();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -132,10 +184,9 @@ class _AppNavigatorState extends State<_AppNavigator> {
       locale: localeProvider.locale,
       theme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
-      home: _buildHome(),
+      home: authProvider.isLoggedIn ? _buildHome() : const LoginScreen(),
       routes: {
         '/home': (context) => const MainShell(),
-        '/paywall': (context) => const PaywallScreen(),
       },
     );
   }
@@ -261,7 +312,7 @@ class _NavBar extends StatelessWidget {
               _NavBarItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home_rounded,
-                label: 'Home',
+                label: context.read<LocaleProvider>().strings.navHome,
                 isSelected: currentTab == 0,
                 badge: hasActiveTimer,
                 onTap: () => onTabChanged(0),
@@ -269,21 +320,21 @@ class _NavBar extends StatelessWidget {
               _NavBarItem(
                 icon: Icons.history_outlined,
                 activeIcon: Icons.history_rounded,
-                label: 'History',
+                label: context.read<LocaleProvider>().strings.navHistory,
                 isSelected: currentTab == 1,
                 onTap: () => onTabChanged(1),
               ),
               _NavBarItem(
                 icon: Icons.insights_outlined,
                 activeIcon: Icons.insights_rounded,
-                label: 'Insights',
+                label: context.read<LocaleProvider>().strings.navInsights,
                 isSelected: currentTab == 2,
                 onTap: () => onTabChanged(2),
               ),
               _NavBarItem(
                 icon: Icons.person_outline,
                 activeIcon: Icons.person_rounded,
-                label: 'Profile',
+                label: context.read<LocaleProvider>().strings.navProfile,
                 isSelected: currentTab == 3,
                 onTap: () => onTabChanged(3),
               ),

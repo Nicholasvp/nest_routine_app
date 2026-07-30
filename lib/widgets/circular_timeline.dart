@@ -28,23 +28,20 @@ class CircularTimeline extends StatelessWidget {
         return SizedBox(
           width: size,
           height: size,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: CustomPaint(
-              painter: _TimelinePainter(
-                todayEvents: todayEvents,
-                activeSleep: activeSleep,
-                now: DateTime.now(),
-              ),
-              child: Center(
-                child: onTap != null
-                    ? GestureDetector(
-                        onTap: onTap,
-                        behavior: HitTestBehavior.opaque,
-                        child: _buildCenterContent(context),
-                      )
-                    : _buildCenterContent(context),
-              ),
+          child: CustomPaint(
+            painter: _TimelinePainter(
+              todayEvents: todayEvents,
+              activeSleep: activeSleep,
+              now: DateTime.now(),
+            ),
+            child: Center(
+              child: onTap != null
+                  ? GestureDetector(
+                      onTap: onTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: _buildCenterContent(context),
+                    )
+                  : _buildCenterContent(context),
             ),
           ),
         );
@@ -194,7 +191,7 @@ class _TimelinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
+    final radius = size.width / 2 - 24;
     final innerRadius = radius * 0.72;
 
     _drawStarDots(canvas, size, center, radius);

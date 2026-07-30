@@ -11,9 +11,10 @@ class FeedSheet extends StatefulWidget {
   final BabyEvent? activeTimer;
   final BabyEvent? event;
   final void Function(DateTime startTime, FeedSide? feedSide) onStartNursing;
-  final void Function(DateTime endTime, FeedSide? feedSide) onStopNursing;
+  final void Function(DateTime endTime, FeedSide? feedSide, {DateTime? startTime}) onStopNursing;
   final void Function(BabyEvent event) onLogFeed;
   final void Function(BabyEvent event)? onUpdateFeed;
+  final void Function(FeedSide feedSide)? onTimerFeedSideChanged;
 
   const FeedSheet({
     super.key,
@@ -23,6 +24,7 @@ class FeedSheet extends StatefulWidget {
     required this.onStopNursing,
     required this.onLogFeed,
     this.onUpdateFeed,
+    this.onTimerFeedSideChanged,
   });
 
   @override
@@ -35,7 +37,9 @@ class _FeedSheetState extends State<FeedSheet> {
   late int _durationMinutes;
   late int _volumeMl;
   late DateTime _feedStartTime;
+  late DateTime _feedEndTime;
   bool _isManualTime = false;
+  bool _isManualMode = false;
 
   @override
   void initState() {
@@ -46,13 +50,26 @@ class _FeedSheetState extends State<FeedSheet> {
       _durationMinutes = widget.event!.durationMinutes ?? 15;
       _volumeMl = widget.event!.volumeMl ?? 60;
       _feedStartTime = widget.event!.startTime;
+      _feedEndTime = widget.event!.endTime ?? DateTime.now();
       _isManualTime = true;
     } else {
       _feedType = FeedType.breast;
-      _feedSide = FeedSide.left;
+      _feedSide = widget.activeTimer?.feedSide ?? FeedSide.left;
       _durationMinutes = 15;
       _volumeMl = 60;
-      _feedStartTime = DateTime.now();
+      _feedStartTime = DateTime.now().subtract(const Duration(minutes: 15));
+      _feedEndTime = DateTime.now();
+    }
+  }
+
+  @override
+  void didUpdateWidget(FeedSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activeTimer != oldWidget.activeTimer && widget.activeTimer != null) {
+      _feedSide = widget.activeTimer!.feedSide ?? _feedSide;
+    }
+    if (widget.event != oldWidget.event && widget.event != null) {
+      _feedSide = widget.event!.feedSide ?? _feedSide;
     }
   }
 
@@ -109,6 +126,23 @@ class _FeedSheetState extends State<FeedSheet> {
             Row(
               children: [
                 Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showAdjustDialog,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: Text(strings.adjust),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textSecondary,
+                      side: const BorderSide(color: AppColors.cardBorder),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
                   child: OutlinedButton.icon(
                     onPressed: () {
                       widget.onStopNursing(DateTime.now(), _feedSide);
@@ -168,6 +202,59 @@ class _FeedSheetState extends State<FeedSheet> {
     );
   }
 
+  void _showAdjustDialog() {
+    final tr = context.read<LocaleProvider>().strings;
+    DateTime adjustStart = widget.activeTimer!.startTime;
+    DateTime adjustEnd = DateTime.now();
+    final startLabel = tr.startTime;
+    final endLabel = tr.endTime;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(tr.adjust),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _TimePicker(
+                label: startLabel,
+                time: adjustStart,
+                onChanged: (t) => setDialogState(() => adjustStart = t),
+              ),
+              const SizedBox(height: 12),
+              _TimePicker(
+                label: endLabel,
+                time: adjustEnd,
+                onChanged: (t) => setDialogState(() => adjustEnd = t),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(tr.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                widget.onStopNursing(adjustEnd, _feedSide, startTime: adjustStart);
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              child: Text(tr.confirm),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _setFeedSide(FeedSide side) {
+    setState(() => _feedSide = side);
+    if (widget.activeTimer != null) {
+      widget.onTimerFeedSideChanged?.call(side);
+    }
+  }
+
   Widget _buildSideSelector(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
     return Row(
@@ -176,7 +263,7 @@ class _FeedSheetState extends State<FeedSheet> {
           child: _SideButton(
             label: strings.left,
             selected: _feedSide == FeedSide.left,
-            onTap: () => setState(() => _feedSide = FeedSide.left),
+            onTap: () => _setFeedSide(FeedSide.left),
           ),
         ),
         const SizedBox(width: 12),
@@ -184,7 +271,7 @@ class _FeedSheetState extends State<FeedSheet> {
           child: _SideButton(
             label: strings.right,
             selected: _feedSide == FeedSide.right,
-            onTap: () => setState(() => _feedSide = FeedSide.right),
+            onTap: () => _setFeedSide(FeedSide.right),
           ),
         ),
         const SizedBox(width: 12),
@@ -192,7 +279,7 @@ class _FeedSheetState extends State<FeedSheet> {
           child: _SideButton(
             label: strings.both,
             selected: _feedSide == FeedSide.both,
-            onTap: () => setState(() => _feedSide = FeedSide.both),
+            onTap: () => _setFeedSide(FeedSide.both),
           ),
         ),
       ],
@@ -209,26 +296,44 @@ class _FeedSheetState extends State<FeedSheet> {
             color: AppColors.cardDark,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: _TimePicker(
-            label: 'Time',
-            time: _feedStartTime,
-            onChanged: (t) => setState(() => _feedStartTime = t),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _TimePicker(
+                      label: strings.startTime,
+                      time: _feedStartTime,
+                      onChanged: (t) => setState(() => _feedStartTime = t),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.arrow_forward,
+                        color: AppColors.textTertiary, size: 18),
+                  ),
+                  Expanded(
+                    child: _TimePicker(
+                      label: strings.endTime,
+                      time: _feedEndTime,
+                      onChanged: (t) => setState(() => _feedEndTime = t),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ],
           ),
         ),
         _buildFeedTypeSelector(context),
         const SizedBox(height: 20),
         if (_feedType == FeedType.breast) ...[
           _buildSideSelector(context),
-          const SizedBox(height: 20),
-          _buildSlider(
-            context,
-            label: strings.duration,
-            value: _durationMinutes.toDouble(),
-            min: 1,
-            max: _durationMinutes > 60 ? _durationMinutes.toDouble() : 60,
-            display: '$_durationMinutes min',
-            onChanged: (v) => setState(() => _durationMinutes = v.round()),
-          ),
         ] else ...[
           _buildSlider(
             context,
@@ -266,7 +371,7 @@ class _FeedSheetState extends State<FeedSheet> {
   Widget _buildNewFeedMode(BuildContext context, Strings strings) {
     return Column(
       children: [
-        if (_isManualTime)
+        if (_isManualMode) ...[
           Container(
             margin: const EdgeInsets.only(bottom: 20),
             padding: const EdgeInsets.all(16),
@@ -274,41 +379,87 @@ class _FeedSheetState extends State<FeedSheet> {
               color: AppColors.cardDark,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: _TimePicker(
-              label: 'Time',
-              time: _feedStartTime,
-              onChanged: (t) => setState(() => _feedStartTime = t),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TimePicker(
+                        label: strings.startTime,
+                        time: _feedStartTime,
+                        onChanged: (t) => setState(() => _feedStartTime = t),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.arrow_forward,
+                          color: AppColors.textTertiary, size: 18),
+                    ),
+                    Expanded(
+                      child: _TimePicker(
+                        label: strings.endTime,
+                        time: _feedEndTime,
+                        onChanged: (t) => setState(() => _feedEndTime = t),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13),
+                ),
+              ],
             ),
           ),
-        if (!_isManualTime)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => setState(() => _isManualTime = true),
-              icon: const Icon(Icons.access_time_outlined, size: 16),
-              label: Text(
-                strings.manualTimeEntry,
-                style: TextStyle(
-                  color: AppColors.textSecondary.withValues(alpha: 0.7),
-                  fontSize: 13,
+        ] else ...[
+          if (_isManualTime)
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: _TimePicker(
+                label: strings.time,
+                time: _feedStartTime,
+                onChanged: (t) => setState(() => _feedStartTime = t),
+              ),
+            ),
+          if (!_isManualTime)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _isManualTime = true),
+                icon: const Icon(Icons.access_time_outlined, size: 16),
+                label: Text(
+                  strings.manualTimeEntry,
+                  style: TextStyle(
+                    color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
-          ),
+        ],
         _buildFeedTypeSelector(context),
         const SizedBox(height: 20),
         if (_feedType == FeedType.breast) ...[
           _buildSideSelector(context),
-          const SizedBox(height: 20),
-          _buildSlider(
-            context,
-            label: strings.duration,
-            value: _durationMinutes.toDouble(),
-            min: 1,
-            max: _durationMinutes > 60 ? _durationMinutes.toDouble() : 60,
-            display: '$_durationMinutes min',
-            onChanged: (v) => setState(() => _durationMinutes = v.round()),
-          ),
+          if (!_isManualMode) ...[
+            const SizedBox(height: 20),
+            _buildSlider(
+              context,
+              label: strings.duration,
+              value: _durationMinutes.toDouble(),
+              min: 1,
+              max: _durationMinutes > 60 ? _durationMinutes.toDouble() : 60,
+              display: '$_durationMinutes min',
+              onChanged: (v) => setState(() => _durationMinutes = v.round()),
+            ),
+          ],
         ] else ...[
           _buildSlider(
             context,
@@ -360,6 +511,19 @@ class _FeedSheetState extends State<FeedSheet> {
             ),
           ),
         ),
+        if (!_isManualMode && !_isManualTime) ...[
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: () => setState(() => _isManualMode = true),
+            child: Text(
+              strings.manualTimeEntry,
+              style: TextStyle(
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -444,9 +608,18 @@ class _FeedSheetState extends State<FeedSheet> {
       babyId: '',
       type: EventType.feed,
       startTime: _feedStartTime,
+      endTime: _isManualMode
+          ? _feedEndTime
+          : (_feedType == FeedType.breast
+              ? _feedStartTime.add(Duration(minutes: _durationMinutes))
+              : _feedStartTime),
       feedType: _feedType,
       feedSide: _feedType == FeedType.breast ? _feedSide : null,
-      durationMinutes: _feedType == FeedType.breast ? _durationMinutes : null,
+      durationMinutes: _feedType == FeedType.breast
+          ? (_isManualMode
+              ? _feedEndTime.difference(_feedStartTime).inMinutes
+              : _durationMinutes)
+          : null,
       volumeMl: _feedType == FeedType.bottle ? _volumeMl : null,
     );
     widget.onLogFeed(event);
@@ -455,11 +628,13 @@ class _FeedSheetState extends State<FeedSheet> {
 
   void _saveEdit() {
     if (widget.event != null && widget.onUpdateFeed != null) {
+      final duration = _feedEndTime.difference(_feedStartTime).inMinutes;
       final updated = widget.event!.copyWith(
         startTime: _feedStartTime,
+        endTime: _feedEndTime,
         feedType: _feedType,
         feedSide: _feedType == FeedType.breast ? _feedSide : null,
-        durationMinutes: _feedType == FeedType.breast ? _durationMinutes : null,
+        durationMinutes: _feedType == FeedType.breast ? duration : null,
         volumeMl: _feedType == FeedType.bottle ? _volumeMl : null,
       );
       widget.onUpdateFeed!(updated);

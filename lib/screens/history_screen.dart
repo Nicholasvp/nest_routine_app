@@ -12,6 +12,7 @@ import '../widgets/bottom_sheets/sleep_sheet.dart';
 import '../widgets/bottom_sheets/feed_sheet.dart';
 import '../widgets/bottom_sheets/diaper_sheet.dart';
 import '../services/navigation_service.dart';
+import '../providers/locale_provider.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -39,12 +40,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     final babyProvider = context.watch<BabyProvider>();
     final eventProvider = context.watch<EventProvider>();
+    final strings = context.read<LocaleProvider>().strings;
     final baby = babyProvider.currentBaby;
 
     if (baby == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('History')),
-        body: const Center(child: Text('No baby profile')),
+        appBar: AppBar(title: Text(strings.history)),
+        body: Center(child: Text(strings.noBabyProfile)),
       );
     }
 
@@ -77,9 +79,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             color: AppColors.textTertiary
                                 .withValues(alpha: 0.5)),
                         const SizedBox(height: 12),
-                        const Text(
-                          'No events for this day',
-                          style: TextStyle(
+                        Text(
+                          strings.noEventsForDay,
+                          style: const TextStyle(
                               color: AppColors.textTertiary, fontSize: 15),
                         ),
                       ],
@@ -220,7 +222,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           builder: (_) => FeedSheet(
             event: event,
             onStartNursing: (_, __) {},
-            onStopNursing: (_, __) {},
+            onStopNursing: (_, __, {startTime}) {},
             onLogFeed: (_) {},
             onUpdateFeed: (updated) {
               eventProvider.updateEvent(updated);
@@ -247,15 +249,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _confirmDelete(
       BuildContext context, EventProvider eventProvider, BabyEvent event) {
+    final strings = context.read<LocaleProvider>().strings;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete event?'),
-        content: Text('Remove this ${event.typeLabel.toLowerCase()} log?'),
+        title: Text(strings.deleteEvent),
+        content: Text(strings.removeEventLog(event.typeLabel.toLowerCase())),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(strings.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -265,7 +268,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.error,
             ),
-            child: const Text('Delete'),
+            child: Text(strings.delete),
           ),
         ],
       ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/event.dart';
+import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_utils.dart';
+import '../utils/strings.dart';
 
 class EventCard extends StatelessWidget {
   final BabyEvent event;
@@ -49,7 +52,7 @@ class EventCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        event.typeLabel,
+                        event.localizedTypeLabel(context.read<LocaleProvider>().strings),
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 15,
@@ -70,7 +73,7 @@ class EventCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    _subtitle,
+                    _subtitle(context.read<LocaleProvider>().strings),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -111,7 +114,7 @@ class EventCard extends StatelessWidget {
     }
   }
 
-  String get _subtitle {
+  String _subtitle(Strings strings) {
     final time = AppDateUtils.formatTime(event.startTime);
     final datePart =
         showDate ? ' ${AppDateUtils.formatDate(event.startTime)}' : '';
@@ -119,10 +122,10 @@ class EventCard extends StatelessWidget {
     if (event.type == EventType.feed) {
       final details = <String>[];
       if (event.feedType != null) {
-        details.add(event.feedType == FeedType.breast ? 'Breast' : 'Bottle');
+        details.add(event.feedType == FeedType.breast ? strings.breast : strings.bottle);
       }
       if (event.feedSide != null && event.feedSide != FeedSide.both) {
-        details.add(event.feedSide == FeedSide.left ? 'Left' : 'Right');
+        details.add(event.feedSide == FeedSide.left ? strings.left : strings.right);
       }
       if (event.feedType == FeedType.bottle && event.volumeMl != null) {
         details.add('${event.volumeMl}ml');
@@ -134,14 +137,14 @@ class EventCard extends StatelessWidget {
 
     if (event.type == EventType.pee || event.type == EventType.poop) {
       final details = <String>[];
-      if (event.hasPee) details.add('Pee');
-      if (event.hasPoop) details.add('Poop');
+      if (event.hasPee) details.add(strings.pee);
+      if (event.hasPoop) details.add(strings.poop);
       if (event.diaperTexture != null) {
         final labels = {
-          DiaperTexture.normal: 'Normal',
-          DiaperTexture.soft: 'Soft',
-          DiaperTexture.liquid: 'Liquid',
-          DiaperTexture.dry: 'Dry',
+          DiaperTexture.normal: strings.normal,
+          DiaperTexture.soft: strings.soft,
+          DiaperTexture.liquid: strings.liquid,
+          DiaperTexture.dry: strings.dry,
         };
         details.add(labels[event.diaperTexture]!);
       }

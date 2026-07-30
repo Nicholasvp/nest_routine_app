@@ -1,15 +1,21 @@
+import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../models/baby.dart';
 import '../models/event.dart';
 import '../providers/baby_provider.dart';
 import '../providers/event_provider.dart';
+import '../providers/locale_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../services/navigation_service.dart';
+import '../services/purchase_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_utils.dart';
 import '../utils/prediction_engine.dart';
-import '../services/navigation_service.dart';
+import '../utils/strings.dart';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -40,17 +46,23 @@ class _InsightsScreenState extends State<InsightsScreen>
     final babyProvider = context.watch<BabyProvider>();
     final eventProvider = context.watch<EventProvider>();
     final baby = babyProvider.currentBaby;
+    final strings = context.read<LocaleProvider>().strings;
+    final isPro = context.watch<SubscriptionProvider>().isPro;
 
     if (baby == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Analytics')),
-        body: const Center(child: Text('No baby profile')),
+        appBar: AppBar(title: Text(strings.analytics)),
+        body: Center(child: Text(strings.noBabyProfile)),
       );
+    }
+
+    if (!isPro) {
+      return _buildProGate(context, baby, eventProvider, strings);
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics'),
+        title: Text(strings.analytics),
         leading: GestureDetector(
           onTap: () => NavigationService.goToHome(),
           child: const Icon(Icons.arrow_back_ios_new_rounded,
@@ -65,10 +77,10 @@ class _InsightsScreenState extends State<InsightsScreen>
             indicatorColor: AppColors.sleepPurple,
             labelColor: AppColors.sleepPurple,
             unselectedLabelColor: AppColors.textTertiary,
-            tabs: const [
-              Tab(icon: Icon(Icons.bedtime_outlined), text: 'Sleep'),
-              Tab(icon: Icon(Icons.local_dining_outlined), text: 'Feed'),
-              Tab(icon: Icon(Icons.cleaning_services_outlined), text: 'Diaper'),
+            tabs: [
+              Tab(icon: Icon(Icons.bedtime_outlined), text: strings.sleep),
+              Tab(icon: Icon(Icons.local_dining_outlined), text: strings.feed),
+              Tab(icon: Icon(Icons.cleaning_services_outlined), text: strings.diaper),
             ],
           ),
           Expanded(
@@ -84,6 +96,154 @@ class _InsightsScreenState extends State<InsightsScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildProGate(BuildContext context, Baby baby, EventProvider eventProvider, Strings strings) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(strings.analytics),
+        leading: GestureDetector(
+          onTap: () => NavigationService.goToHome(),
+          child: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppColors.textSecondary, size: 20),
+        ),
+      ),
+      body: Stack(
+        children: [
+          AbsorbPointer(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Opacity(
+                opacity: 0.5,
+                child: Column(
+                  children: [
+                    _buildPeriodSelector(),
+                    TabBar(
+                      controller: _tabController,
+                      indicatorColor: AppColors.sleepPurple,
+                      labelColor: AppColors.sleepPurple,
+                      unselectedLabelColor: AppColors.textTertiary,
+                      tabs: [
+                        Tab(icon: Icon(Icons.bedtime_outlined), text: strings.sleep),
+                        Tab(icon: Icon(Icons.local_dining_outlined), text: strings.feed),
+                        Tab(icon: Icon(Icons.cleaning_services_outlined), text: strings.diaper),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
+                          _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
+                          _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: _buildProOverlayCard(context, strings),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProOverlayCard(BuildContext context, Strings strings) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.sleepPurple.withValues(alpha: 0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.sleepPurple.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.lock_outline_rounded,
+              color: AppColors.sleepPurple,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            strings.unlockInsights,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            strings.unlockInsightsDesc,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => _openPaywall(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.sleepPurple,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                strings.upgradeToPro,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openPaywall(BuildContext context) async {
+    try {
+      final result = await RevenueCatUI.presentPaywallIfNeeded(
+        PurchaseService.proEntitlementId,
+        displayCloseButton: true,
+      );
+      if (!context.mounted) return;
+      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+        context.read<SubscriptionProvider>().refresh();
+      }
+    } catch (e) {
+      debugPrint('[InsightsScreen] Paywall error: $e');
+    }
   }
 
   Widget _buildPeriodSelector() {
@@ -149,6 +309,7 @@ class _SleepTab extends StatelessWidget {
         .toList();
     final avgNapCount =
         sleepEvents.isEmpty ? 0 : sleepEvents.length / days;
+    final strings = context.read<LocaleProvider>().strings;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -157,19 +318,19 @@ class _SleepTab extends StatelessWidget {
           _buildSummaryRow(context, [
             _MetricData(
               icon: Icons.bedtime_outlined,
-              label: 'Avg sleep/day',
+              label: strings.avgSleepPerDay,
               value: '${avgSleep.toStringAsFixed(1)}h',
               color: AppColors.sleepPurple,
             ),
             _MetricData(
               icon: Icons.water_drop_outlined,
-              label: 'Today',
+              label: strings.todayLabel,
               value: '${todaySleep.toStringAsFixed(1)}h',
               color: AppColors.diaperTeal,
             ),
             _MetricData(
               icon: Icons.nightlight_round,
-              label: 'Avg naps/day',
+              label: strings.avgNapsPerDay,
               value: avgNapCount.toStringAsFixed(1),
               color: AppColors.wakeYellow,
             ),
@@ -179,7 +340,7 @@ class _SleepTab extends StatelessWidget {
           const SizedBox(height: 16),
           _buildAgeComparison(context, baby.ageInMonths, avgSleep),
           const SizedBox(height: 16),
-          _buildPredictionCard(context, nextNap, 'Next Nap',
+          _buildPredictionCard(context, nextNap, strings.nextNapLabel,
               Icons.nightlight_round, AppColors.sleepPurple),
           const SizedBox(height: 80),
         ],
@@ -193,6 +354,7 @@ class _SleepTab extends StatelessWidget {
     final maxSleep = entries.fold<double>(
         0, (max, e) => e.value > max ? e.value : max);
     final chartMax = (maxSleep < 24 ? 24 : maxSleep).ceilToDouble();
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -208,13 +370,13 @@ class _SleepTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Sleep Hours',
+                strings.sleepHours,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
               Text(
-                'Avg: ${avgSleep.toStringAsFixed(1)}h',
+                strings.avgLabel('${avgSleep.toStringAsFixed(1)}h'),
                 style: const TextStyle(
                     color: AppColors.sleepPurple,
                     fontSize: 14,
@@ -319,7 +481,7 @@ class _SleepTab extends StatelessWidget {
                   color: AppColors.textTertiary.withValues(alpha: 0.6)),
               const SizedBox(width: 6),
               Text(
-                'Recommended sleep for ${baby.ageInMonths}mo: ${_recommendedSleep(baby.ageInMonths)}h',
+                strings.recommendedSleepFor(baby.ageInMonths, _recommendedSleep(baby.ageInMonths)),
                 style: TextStyle(
                     color: AppColors.textTertiary.withValues(alpha: 0.7),
                     fontSize: 11),
@@ -336,6 +498,7 @@ class _SleepTab extends StatelessWidget {
     final recommended = _recommendedSleep(ageMonths);
     final diff = avgSleep - recommended;
     final isGood = diff.abs() < 2;
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -366,15 +529,15 @@ class _SleepTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'vs Recommended Sleep',
+                  strings.vsRecommendedSleep,
                   style: const TextStyle(
                       color: AppColors.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   isGood
-                      ? 'Your baby is sleeping within the recommended range of ${recommended}h for $ageMonths months.'
-                      : 'Average sleep is ${avgSleep.toStringAsFixed(1)}h (recommended: ${recommended}h for $ageMonths months)',
+                      ? strings.sleepingWell(recommended, ageMonths)
+                      : strings.sleepingOff(avgSleep, recommended, ageMonths),
                   style: const TextStyle(
                       color: AppColors.textPrimary, fontSize: 13, height: 1.3),
                 ),
@@ -388,6 +551,7 @@ class _SleepTab extends StatelessWidget {
 
   Widget _buildPredictionCard(BuildContext context, PredictionResult prediction,
       String label, IconData icon, Color color) {
+    final strings = context.read<LocaleProvider>().strings;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -424,7 +588,7 @@ class _SleepTab extends StatelessWidget {
                   ),
                 ),
                 if (prediction.confidencePercent > 0)
-                  Text('${prediction.confidencePercent}% confidence',
+                  Text(strings.confidence(prediction.confidencePercent),
                       style: const TextStyle(
                           color: AppColors.textTertiary, fontSize: 11)),
               ],
@@ -472,6 +636,7 @@ class _FeedTab extends StatelessWidget {
     final volumeByDay =
         eventProvider.getFeedVolumeByDay(baby.id, days: days);
     final hasVolume = volumeByDay.values.any((v) => v > 0);
+    final strings = context.read<LocaleProvider>().strings;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -480,19 +645,19 @@ class _FeedTab extends StatelessWidget {
           _buildSummaryRow(context, [
             _MetricData(
               icon: Icons.repeat_outlined,
-              label: 'Avg feeds/day',
+              label: strings.avgFeedsPerDay,
               value: avgFeeds.toStringAsFixed(1),
               color: AppColors.feedOrange,
             ),
             _MetricData(
               icon: Icons.timer_outlined,
-              label: 'Avg interval',
+              label: strings.avgInterval,
               value: avgInterval > 0 ? '${avgInterval.round()}min' : '--',
               color: AppColors.wakeYellow,
             ),
             _MetricData(
               icon: Icons.balance_outlined,
-              label: 'Breast',
+              label: strings.breast,
               value: '${(breastRatio * 100).round()}%',
               color: AppColors.feedOrange,
             ),
@@ -506,7 +671,7 @@ class _FeedTab extends StatelessWidget {
           ],
           _buildSideDistribution(context, sideDist),
           const SizedBox(height: 16),
-          _buildPredictionCard(context, nextFeed, 'Next Feed',
+          _buildPredictionCard(context, nextFeed, strings.nextFeedLabel,
               Icons.local_dining_outlined, AppColors.feedOrange),
           const SizedBox(height: 80),
         ],
@@ -519,6 +684,7 @@ class _FeedTab extends StatelessWidget {
     final entries = feedCount.entries.toList();
     final maxCount = entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
     final chartMax = (maxCount < 8 ? 8 : maxCount).toDouble();
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -534,13 +700,13 @@ class _FeedTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Feeds per Day',
+                strings.feedsPerDay,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
               Text(
-                'Avg: ${avg.toStringAsFixed(1)}',
+                strings.avgLabel(avg.toStringAsFixed(1)),
                 style: const TextStyle(
                     color: AppColors.feedOrange,
                     fontSize: 14,
@@ -561,7 +727,7 @@ class _FeedTab extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final day = entries[group.x.toInt()].key;
                       return BarTooltipItem(
-                        '${AppDateUtils.formatDate(day)}\n${rod.toY.toInt()} feeds',
+                        '${AppDateUtils.formatDate(day)}\n${strings.feedsCount(rod.toY.toInt())}',
                         const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12),
                       );
@@ -646,6 +812,7 @@ class _FeedTab extends StatelessWidget {
       BuildContext context, Map<DateTime, int> volumeByDay) {
     final entries = volumeByDay.entries.toList();
     final maxVol = entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -658,7 +825,7 @@ class _FeedTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Milk Volume per Day',
+            strings.milkVolumePerDay,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -759,6 +926,7 @@ class _FeedTab extends StatelessWidget {
       BuildContext context, Map<FeedSide, int> sides) {
     final total = sides.values.fold(0, (a, b) => a + b);
     if (total == 0) return const SizedBox.shrink();
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -771,7 +939,7 @@ class _FeedTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Breastfeeding Side Distribution',
+            strings.breastfeedingSideDistribution,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -779,13 +947,13 @@ class _FeedTab extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildSideItem(context, 'Left', sides[FeedSide.left] ?? 0, total,
+              _buildSideItem(context, strings.left, sides[FeedSide.left] ?? 0, total,
                   AppColors.feedOrange),
               const SizedBox(width: 12),
-              _buildSideItem(context, 'Right', sides[FeedSide.right] ?? 0,
+              _buildSideItem(context, strings.right, sides[FeedSide.right] ?? 0,
                   total, AppColors.wakeYellow),
               const SizedBox(width: 12),
-              _buildSideItem(context, 'Both', sides[FeedSide.both] ?? 0, total,
+              _buildSideItem(context, strings.both, sides[FeedSide.both] ?? 0, total,
                   AppColors.sleepPurple),
             ],
           ),
@@ -797,6 +965,7 @@ class _FeedTab extends StatelessWidget {
   Widget _buildSideItem(BuildContext context, String label, int count,
       int total, Color color) {
     final pct = total > 0 ? (count / total * 100).round() : 0;
+    final strings = context.read<LocaleProvider>().strings;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -818,7 +987,7 @@ class _FeedTab extends StatelessWidget {
             Text(label,
                 style: const TextStyle(
                     color: AppColors.textSecondary, fontSize: 11)),
-            Text('$count feeds',
+            Text(strings.feedsCount(count),
                 style: const TextStyle(
                     color: AppColors.textTertiary, fontSize: 10)),
           ],
@@ -829,6 +998,7 @@ class _FeedTab extends StatelessWidget {
 
   Widget _buildPredictionCard(BuildContext context, PredictionResult prediction,
       String label, IconData icon, Color color) {
+    final strings = context.read<LocaleProvider>().strings;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -865,7 +1035,7 @@ class _FeedTab extends StatelessWidget {
                   ),
                 ),
                 if (prediction.confidencePercent > 0)
-                  Text('${prediction.confidencePercent}% confidence',
+                  Text(strings.confidence(prediction.confidencePercent),
                       style: const TextStyle(
                           color: AppColors.textTertiary, fontSize: 11)),
               ],
@@ -903,6 +1073,7 @@ class _DiaperTab extends StatelessWidget {
     final textures =
         eventProvider.getDiaperTextureDistribution(baby.id, days: days);
     final nextDiaper = eventProvider.predictNextDiaper(baby.id);
+    final strings = context.read<LocaleProvider>().strings;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -911,19 +1082,19 @@ class _DiaperTab extends StatelessWidget {
           _buildSummaryRow(context, [
             _MetricData(
               icon: Icons.cleaning_services_outlined,
-              label: 'Avg diapers/day',
+              label: strings.avgDiapersPerDay,
               value: avgDiapers.toStringAsFixed(1),
               color: AppColors.diaperTeal,
             ),
             _MetricData(
               icon: Icons.numbers_outlined,
-              label: 'Total ($days d)',
+              label: strings.totalDays(days),
               value: '$totalDiapers',
               color: AppColors.sleepPurple,
             ),
             _MetricData(
               icon: Icons.water_drop_outlined,
-              label: 'Pee only',
+              label: strings.peeOnly,
               value: '${breakdown.$1}',
               color: AppColors.wakeYellow,
             ),
@@ -937,7 +1108,7 @@ class _DiaperTab extends StatelessWidget {
             _buildTextureDistribution(context, textures),
             const SizedBox(height: 16),
           ],
-          _buildPredictionCard(context, nextDiaper, 'Next Diaper',
+          _buildPredictionCard(context, nextDiaper, strings.nextDiaperLabel,
               Icons.cleaning_services_outlined, AppColors.diaperTeal),
           const SizedBox(height: 80),
         ],
@@ -950,6 +1121,7 @@ class _DiaperTab extends StatelessWidget {
     final entries = diaperCount.entries.toList();
     final maxCount = entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
     final chartMax = (maxCount < 8 ? 8 : maxCount).toDouble();
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -965,13 +1137,13 @@ class _DiaperTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Diaper Changes per Day',
+                strings.diaperChangesPerDay,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
               Text(
-                'Avg: ${avg.toStringAsFixed(1)}',
+                strings.avgLabel(avg.toStringAsFixed(1)),
                 style: const TextStyle(
                     color: AppColors.diaperTeal,
                     fontSize: 14,
@@ -992,7 +1164,7 @@ class _DiaperTab extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final day = entries[group.x.toInt()].key;
                       return BarTooltipItem(
-                        '${AppDateUtils.formatDate(day)}\n${rod.toY.toInt()} changes',
+                        '${AppDateUtils.formatDate(day)}\n${strings.changesCount(rod.toY.toInt())}',
                         const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12),
                       );
@@ -1080,6 +1252,7 @@ class _DiaperTab extends StatelessWidget {
     final both = breakdown.$3;
     final total = pee + poop + both;
     if (total == 0) return const SizedBox.shrink();
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1092,7 +1265,7 @@ class _DiaperTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pee vs Poop Breakdown',
+            strings.peeVsPoopBreakdown,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -1111,7 +1284,7 @@ class _DiaperTab extends StatelessWidget {
                         color: AppColors.wakeYellow.withValues(alpha: 0.7),
                         child: Center(
                           child: Text(
-                            '${(pee / total * 100).round()}% Pee',
+                            strings.peePercent((pee / total * 100).round()),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
@@ -1127,7 +1300,7 @@ class _DiaperTab extends StatelessWidget {
                         color: AppColors.sleepPurple.withValues(alpha: 0.7),
                         child: Center(
                           child: Text(
-                            '${(both / total * 100).round()}% Both',
+                            strings.bothPercent((both / total * 100).round()),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
@@ -1143,7 +1316,7 @@ class _DiaperTab extends StatelessWidget {
                         color: AppColors.diaperTeal.withValues(alpha: 0.7),
                         child: Center(
                           child: Text(
-                            '${(poop / total * 100).round()}% Poop',
+                            strings.poopPercent((poop / total * 100).round()),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 11,
@@ -1160,9 +1333,9 @@ class _DiaperTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _legendDot(AppColors.wakeYellow, 'Pee only ($pee)'),
-              _legendDot(AppColors.sleepPurple, 'Both ($both)'),
-              _legendDot(AppColors.diaperTeal, 'Poop only ($poop)'),
+              _legendDot(AppColors.wakeYellow, strings.peeOnlyLabel(pee)),
+              _legendDot(AppColors.sleepPurple, strings.bothLabel(both)),
+              _legendDot(AppColors.diaperTeal, strings.poopOnlyLabel(poop)),
             ],
           ),
         ],
@@ -1191,6 +1364,7 @@ class _DiaperTab extends StatelessWidget {
       BuildContext context, Map<DiaperTexture, int> textures) {
     if (textures.values.every((v) => v == 0)) return const SizedBox.shrink();
     final total = textures.values.fold(0, (a, b) => a + b);
+    final strings = context.read<LocaleProvider>().strings;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1203,7 +1377,7 @@ class _DiaperTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Stool Texture',
+            strings.stoolTexture,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -1211,7 +1385,7 @@ class _DiaperTab extends StatelessWidget {
           const SizedBox(height: 12),
           ...textures.entries.map((e) {
             final pct = total > 0 ? (e.value / total * 100).round() : 0;
-            final label = _textureLabel(e.key);
+            final label = _textureLabel(e.key, strings);
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Column(
@@ -1248,21 +1422,22 @@ class _DiaperTab extends StatelessWidget {
     );
   }
 
-  String _textureLabel(DiaperTexture t) {
+  String _textureLabel(DiaperTexture t, Strings strings) {
     switch (t) {
       case DiaperTexture.normal:
-        return 'Normal';
+        return strings.normal;
       case DiaperTexture.soft:
-        return 'Soft';
+        return strings.soft;
       case DiaperTexture.liquid:
-        return 'Liquid';
+        return strings.liquid;
       case DiaperTexture.dry:
-        return 'Dry';
+        return strings.dry;
     }
   }
 
   Widget _buildPredictionCard(BuildContext context, PredictionResult prediction,
       String label, IconData icon, Color color) {
+    final strings = context.read<LocaleProvider>().strings;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1299,7 +1474,7 @@ class _DiaperTab extends StatelessWidget {
                   ),
                 ),
                 if (prediction.confidencePercent > 0)
-                  Text('${prediction.confidencePercent}% confidence',
+                  Text(strings.confidence(prediction.confidencePercent),
                       style: const TextStyle(
                           color: AppColors.textTertiary, fontSize: 11)),
               ],

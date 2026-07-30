@@ -12,6 +12,7 @@ class SleepSheet extends StatefulWidget {
   final void Function(DateTime startTime) onStartSleep;
   final void Function(DateTime endTime) onStopSleep;
   final void Function(BabyEvent event)? onUpdateSleep;
+  final void Function(DateTime startTime, DateTime endTime)? onQuickLog;
 
   const SleepSheet({
     super.key,
@@ -20,6 +21,7 @@ class SleepSheet extends StatefulWidget {
     required this.onStartSleep,
     required this.onStopSleep,
     this.onUpdateSleep,
+    this.onQuickLog,
   });
 
   @override
@@ -227,9 +229,14 @@ class _SleepSheetState extends State<SleepSheet> {
                 onSelected: (_) {
                   final endTime = DateTime.now()
                       .subtract(Duration(minutes: minutes));
-                  widget.onStartSleep(
-                      endTime.subtract(const Duration(minutes: 5)));
-                  widget.onStopSleep(endTime);
+                  final startTime = endTime
+                      .subtract(Duration(minutes: minutes));
+                  if (widget.onQuickLog != null) {
+                    widget.onQuickLog!(startTime, endTime);
+                  } else {
+                    widget.onStartSleep(startTime);
+                    widget.onStopSleep(endTime);
+                  }
                   Navigator.of(context).pop();
                 },
                 selectedColor: AppColors.sleepPurple.withValues(alpha: 0.2),

@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../models/baby.dart';
+import '../providers/auth_provider.dart';
 import '../providers/baby_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/locale_provider.dart';
@@ -10,6 +12,8 @@ import '../theme/app_colors.dart';
 import '../utils/strings.dart';
 import 'notification_settings_screen.dart';
 import '../services/navigation_service.dart';
+import '../services/purchase_service.dart';
+import '../widgets/bottom_sheets/bug_report_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -48,6 +52,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildBabyList(context, babies, babyProvider, strings),
             const SizedBox(height: 20),
             _buildSettingsSection(context, localeProvider, strings),
+            const SizedBox(height: 20),
+            _buildAccountSection(context, strings),
             const SizedBox(height: 20),
             _buildSubscriptionSection(context),
             const SizedBox(height: 80),
@@ -189,6 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 setState(() => _showAddBaby = false);
               },
               onCancel: () => setState(() => _showAddBaby = false),
+              strings: strings,
             ),
             const SizedBox(height: 12),
           ],
@@ -336,6 +343,93 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
+          const Divider(height: 1, color: AppColors.cardBorder),
+          _SettingsRow(
+            icon: Icons.bug_report_outlined,
+            label: strings.reportBug,
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textTertiary, size: 20),
+            onTap: () => _showBugReportSheet(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountSection(BuildContext context, Strings strings) {
+    final authProvider = context.watch<AuthProvider>();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            strings.account,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 12),
+          if (authProvider.user?.email != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.email_outlined, size: 22, color: AppColors.textSecondary),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      authProvider.user!.email!,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const Divider(height: 1, color: AppColors.cardBorder),
+          _SettingsRow(
+            icon: Icons.logout_rounded,
+            label: strings.logout,
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textTertiary, size: 20),
+            onTap: () => _confirmLogout(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    final strings = context.read<LocaleProvider>().strings;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(strings.logout),
+        content: Text(strings.logoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<AuthProvider>().signOut();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: Text(strings.logout),
+          ),
         ],
       ),
     );
@@ -405,23 +499,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (sub.state == PurchaseState.loading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(8),
-                child: SizedBox(
-                  height: 20, width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else ...[
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: sub.isPro
-                    ? _openCustomerCenter
-                    : () => Navigator.pushNamed(context, '/paywall'),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: sub.isPro
+                  ? _openCustomerCenter
+                  : () => _openPaywall(context),
                 icon: Icon(sub.isPro ? Icons.settings_rounded : Icons.star_rounded, size: 18),
                 label: Text(sub.isPro ? strings.manageSubscription : strings.upgradeToPro),
                 style: FilledButton.styleFrom(
@@ -454,7 +537,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ],
-        ],
       ),
     );
   }
@@ -463,22 +545,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await RevenueCatUI.presentCustomerCenter();
   }
 
+  Future<void> _openPaywall(BuildContext context) async {
+    debugPrint('[ProfileScreen] Opening RevenueCat paywall');
+    try {
+      final isPt = context.read<LocaleProvider>().isPortuguese;
+      await PurchaseService.setPreferredLocale(isPt);
+      final result = await RevenueCatUI.presentPaywallIfNeeded(
+        PurchaseService.proEntitlementId,
+        displayCloseButton: true,
+      );
+      debugPrint('[ProfileScreen] Paywall result: $result');
+      if (!context.mounted) return;
+      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+        context.read<SubscriptionProvider>().refresh();
+      }
+    } catch (e) {
+      debugPrint('[ProfileScreen] Paywall error: $e');
+    }
+  }
+
   Future<void> _restorePurchases(BuildContext context) async {
-    final sub = context.read<SubscriptionProvider>();
     final strings = context.read<LocaleProvider>().strings;
-    final result = await sub.restorePurchases();
-    if (!context.mounted) return;
-    if (result.isSuccess && result.isPro) {
+    try {
+      await PurchaseService.restorePurchases();
+      final isPro = await PurchaseService.checkProStatus();
+      context.read<SubscriptionProvider>().refresh();
+      if (!context.mounted) return;
+      if (isPro) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.purchasesRestored)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.noPurchasesFound)),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.purchasesRestored)),
-      );
-    } else if (result.isSuccess && !result.isPro) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.noPurchasesFound)),
-      );
-    } else if (result.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.errorMessage!)),
+        SnackBar(
+          content: Text('Restore failed: $e'),
+        ),
       );
     }
   }
@@ -522,6 +629,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showBugReportSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const BugReportSheet(),
     );
   }
 
@@ -634,8 +750,9 @@ class _SettingsRow extends StatelessWidget {
 class _AddBabyForm extends StatefulWidget {
   final void Function(String name, DateTime dateOfBirth) onSave;
   final VoidCallback onCancel;
+  final Strings strings;
 
-  const _AddBabyForm({required this.onSave, required this.onCancel});
+  const _AddBabyForm({required this.onSave, required this.onCancel, required this.strings});
 
   @override
   State<_AddBabyForm> createState() => _AddBabyFormState();
@@ -663,9 +780,9 @@ class _AddBabyFormState extends State<_AddBabyForm> {
         children: [
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: "Baby's name",
-              hintText: 'Enter name',
+            decoration: InputDecoration(
+              labelText: widget.strings.babysName,
+              hintText: widget.strings.nameHint,
             ),
             autofocus: true,
           ),
@@ -701,8 +818,8 @@ class _AddBabyFormState extends State<_AddBabyForm> {
                   const Icon(Icons.calendar_today,
                       size: 18, color: AppColors.textSecondary),
                   const SizedBox(width: 12),
-                  const Text('Date of birth',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                  Text(widget.strings.dateOfBirth,
+                      style: const TextStyle(color: AppColors.textSecondary)),
                   const Spacer(),
                   Text(
                     DateFormat('MMM d, yyyy').format(_dob),
@@ -726,7 +843,7 @@ class _AddBabyFormState extends State<_AddBabyForm> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Cancel'),
+                  child: Text(widget.strings.cancel),
                 ),
               ),
               const SizedBox(width: 12),
@@ -745,7 +862,7 @@ class _AddBabyFormState extends State<_AddBabyForm> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text('Add Baby'),
+                  child: Text(widget.strings.addBaby),
                 ),
               ),
             ],
@@ -782,14 +899,15 @@ class _EditBabyDialogState extends State<_EditBabyDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.read<LocaleProvider>().strings;
     return AlertDialog(
-      title: const Text('Edit Profile'),
+      title: Text(strings.editProfile),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: widget.nameController,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: InputDecoration(labelText: strings.name),
           ),
           const SizedBox(height: 16),
           GestureDetector(
@@ -834,7 +952,7 @@ class _EditBabyDialogState extends State<_EditBabyDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(strings.cancel),
         ),
         FilledButton(
           onPressed: () {
@@ -847,7 +965,7 @@ class _EditBabyDialogState extends State<_EditBabyDialog> {
               Navigator.pop(context);
             }
           },
-          child: const Text('Save'),
+          child: Text(strings.save),
         ),
       ],
     );

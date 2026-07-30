@@ -98,7 +98,7 @@ class _DiaperSheetState extends State<DiaperSheet> {
               Expanded(
                 child: _DiaperTypeButton(
                   icon: Icons.water_drop_outlined,
-                  label: 'Pee',
+                  label: strings.pee,
                   color: AppColors.wakeYellow,
                   selected: _hasPee,
                   onTap: () => setState(() => _hasPee = !_hasPee),
@@ -108,7 +108,7 @@ class _DiaperSheetState extends State<DiaperSheet> {
               Expanded(
                 child: _DiaperTypeButton(
                   icon: Icons.circle_outlined,
-                  label: 'Poop',
+                  label: strings.poop,
                   color: AppColors.diaperTeal,
                   selected: _hasPoop,
                   onTap: () => setState(() => _hasPoop = !_hasPoop),
@@ -174,10 +174,10 @@ class _DiaperSheetState extends State<DiaperSheet> {
           spacing: 8,
           children: DiaperTexture.values.map((texture) {
             final labels = {
-              DiaperTexture.normal: 'Normal',
-              DiaperTexture.soft: 'Soft',
-              DiaperTexture.liquid: 'Liquid',
-              DiaperTexture.dry: 'Dry',
+              DiaperTexture.normal: strings.normal,
+              DiaperTexture.soft: strings.soft,
+              DiaperTexture.liquid: strings.liquid,
+              DiaperTexture.dry: strings.dry,
             };
             return FilterChip(
               label: Text(labels[texture]!),

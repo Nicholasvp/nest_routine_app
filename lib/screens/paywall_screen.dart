@@ -6,6 +6,7 @@ import '../providers/subscription_provider.dart';
 import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/strings.dart';
+import '../services/purchase_service.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -20,6 +21,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
   @override
   void initState() {
     super.initState();
+    _setLocaleAndCheck();
+  }
+
+  Future<void> _setLocaleAndCheck() async {
+    final isPt = context.read<LocaleProvider>().isPortuguese;
+    await PurchaseService.setPreferredLocale(isPt);
     _checkNativePaywall();
   }
 
@@ -132,11 +139,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        _buildFeatureRow(Icons.auto_graph_rounded, 'Advanced insights & analytics'),
-        _buildFeatureRow(Icons.history_rounded, 'Unlimited history'),
-        _buildFeatureRow(Icons.notifications_active_rounded, 'Smart predictions'),
-        _buildFeatureRow(Icons.baby_changing_station_rounded, 'Multiple babies'),
-        _buildFeatureRow(Icons.cloud_sync_rounded, 'Cloud backup'),
+        _buildFeatureRow(Icons.auto_graph_rounded, strings.featureAdvancedInsights),
+        _buildFeatureRow(Icons.history_rounded, strings.featureUnlimitedHistory),
+        _buildFeatureRow(Icons.notifications_active_rounded, strings.featureSmartPredictions),
+        _buildFeatureRow(Icons.baby_changing_station_rounded, strings.featureMultipleBabies),
+        _buildFeatureRow(Icons.cloud_sync_rounded, strings.featureCloudBackup),
       ],
     );
   }
@@ -202,7 +209,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
+                  child: Text(strings.close),
                 ),
               ],
             ),
