@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -53,7 +54,7 @@ void main() async {
   await WidgetService.init();
 
   try {
-    final isProduction = dotenv.env['IS_PRODUCTION'] == 'true';
+    final isProduction = !kDebugMode;
     final revenueCatKey = isProduction
         ? dotenv.env['REVENUECAT_IOS_API_KEY_PROD']!
         : dotenv.env['REVENUECAT_IOS_API_KEY_DEV']!;
