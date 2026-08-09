@@ -28,6 +28,7 @@ import 'services/notification_service.dart';
 import 'services/navigation_service.dart';
 import 'services/purchase_service.dart';
 import 'services/widget_service.dart';
+import 'services/analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,10 +53,12 @@ void main() async {
   await WidgetService.init();
 
   try {
-    await PurchaseService.initialize(
-      iosApiKey: 'test_BpoJpIniStKnxSClbfrdieuFbYI',
-      androidApiKey: 'test_BpoJpIniStKnxSClbfrdieuFbYI',
-    );
+    final isProduction = dotenv.env['IS_PRODUCTION'] == 'true';
+    final revenueCatKey = isProduction
+        ? dotenv.env['REVENUECAT_IOS_API_KEY_PROD']!
+        : dotenv.env['REVENUECAT_IOS_API_KEY_DEV']!;
+    debugPrint('[RevenueCat] Using ${isProduction ? "PRODUCTION" : "SANDBOX"} key');
+    await PurchaseService.initialize(iosApiKey: revenueCatKey);
   } catch (e) {
     debugPrint('RevenueCat init failed: $e');
   }
@@ -217,6 +220,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentTab = 0;
+  AnalyticsService? _analyticsService;
 
   final _screens = const [
     HomeScreen(),
@@ -224,6 +228,8 @@ class _MainShellState extends State<MainShell> {
     InsightsScreen(),
     ProfileScreen(),
   ];
+
+  final _screenNames = const ['home', 'history', 'insights', 'profile'];
 
   BabyProvider? _babyProvider;
 
@@ -239,6 +245,7 @@ class _MainShellState extends State<MainShell> {
     _babyProvider?.removeListener(_onBabyChanged);
     _babyProvider = context.read<BabyProvider>();
     _babyProvider!.addListener(_onBabyChanged);
+    _analyticsService ??= AnalyticsService(context.read<AuthProvider>().authService);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadEventsForCurrentBaby());
   }
 
@@ -250,7 +257,12 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _onTabChanged() {
-    if (mounted) setState(() => _currentTab = NavigationService.tabIndex.value);
+    if (mounted) {
+      setState(() => _currentTab = NavigationService.tabIndex.value);
+      _analyticsService?.log(AnalyticsService.screenView, AnalyticsService.engagement, properties: {
+        'screen': _screenNames[_currentTab],
+      });
+    }
   }
 
   void _onBabyChanged() {

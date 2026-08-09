@@ -10,6 +10,7 @@ class CircularTimeline extends StatelessWidget {
   final List<BabyEvent> todayEvents;
   final BabyEvent? activeSleep;
   final double? pulseScale;
+  final double? glowRadius;
   final VoidCallback? onTap;
 
   const CircularTimeline({
@@ -17,6 +18,7 @@ class CircularTimeline extends StatelessWidget {
     required this.todayEvents,
     this.activeSleep,
     this.pulseScale,
+    this.glowRadius,
     this.onTap,
   });
 
@@ -56,12 +58,25 @@ class CircularTimeline extends StatelessWidget {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Transform.scale(
-            scale: pulseScale ?? 1.0,
-            child: const Icon(
-              Icons.nightlight_round,
-              color: AppColors.sleepPurple,
-              size: 28,
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                if (glowRadius != null && glowRadius! > 0)
+                  BoxShadow(
+                    color: AppColors.sleepPurple.withValues(alpha: 0.4),
+                    blurRadius: glowRadius!,
+                    spreadRadius: glowRadius! * 0.3,
+                  ),
+              ],
+            ),
+            child: Transform.scale(
+              scale: pulseScale ?? 1.0,
+              child: const Icon(
+                Icons.nightlight_round,
+                color: AppColors.sleepPurple,
+                size: 28,
+              ),
             ),
           ),
           const SizedBox(height: 4),

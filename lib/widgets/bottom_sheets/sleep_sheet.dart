@@ -5,6 +5,7 @@ import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_utils.dart';
+import '../event_success_toast.dart';
 
 class SleepSheet extends StatefulWidget {
   final BabyEvent? activeTimer;
@@ -120,6 +121,13 @@ class _SleepSheetState extends State<SleepSheet> {
                     onPressed: () {
                       widget.onStopSleep(DateTime.now());
                       Navigator.of(context).pop();
+                      EventSuccessToast.show(
+                        context,
+                        icon: Icons.nightlight_round,
+                        color: AppColors.wakeYellow,
+                        title: strings.wakeUp,
+                        subtitle: 'Sleep logged',
+                      );
                     },
                     icon: const Icon(Icons.stop_circle_outlined, size: 20),
                     label: Text(strings.wakeUp,
@@ -145,6 +153,13 @@ class _SleepSheetState extends State<SleepSheet> {
               onPressed: () {
                 widget.onStartSleep(DateTime.now());
                 Navigator.of(context).pop();
+                EventSuccessToast.show(
+                  context,
+                  icon: Icons.nightlight_round,
+                  color: AppColors.sleepPurple,
+                  title: strings.babyFellAsleep,
+                  subtitle: 'Sleep timer started',
+                );
               },
               icon: const Icon(Icons.nightlight_round, size: 20),
               label: Text(strings.babyFellAsleep,
@@ -300,10 +315,24 @@ class _SleepSheetState extends State<SleepSheet> {
                     endTime: _manualEnd,
                   ));
                   Navigator.of(context).pop();
+                  EventSuccessToast.show(
+                    context,
+                    icon: Icons.nightlight_round,
+                    color: AppColors.sleepPurple,
+                    title: strings.adjustSleepTime,
+                    subtitle: 'Sleep updated',
+                  );
                 } else {
                   widget.onStartSleep(_manualStart);
                   widget.onStopSleep(_manualEnd);
                   Navigator.of(context).pop();
+                  EventSuccessToast.show(
+                    context,
+                    icon: Icons.nightlight_round,
+                    color: AppColors.sleepPurple,
+                    title: strings.logSleep,
+                    subtitle: 'Sleep logged',
+                  );
                 }
               },
               style: FilledButton.styleFrom(

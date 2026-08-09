@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -9,20 +8,13 @@ class PurchaseService {
 
   static Future<void> initialize({
     required String iosApiKey,
-    required String androidApiKey,
     bool isPortuguese = false,
   }) async {
     await Purchases.setLogLevel(LogLevel.debug);
     debugPrint('[PurchaseService] LogLevel set to debug');
 
-    PurchasesConfiguration configuration;
-    if (Platform.isAndroid) {
-      configuration = PurchasesConfiguration(androidApiKey);
-      debugPrint('[PurchaseService] Configuring for Android');
-    } else {
-      configuration = PurchasesConfiguration(iosApiKey);
-      debugPrint('[PurchaseService] Configuring for iOS');
-    }
+    final configuration = PurchasesConfiguration(iosApiKey);
+    debugPrint('[PurchaseService] Configuring for iOS');
 
     if (isPortuguese) {
       configuration.preferredUILocaleOverride = 'pt-BR';

@@ -4,11 +4,13 @@ import '../models/baby.dart';
 import '../utils/storage_service.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
+import '../services/analytics_service.dart';
 
 class BabyProvider extends ChangeNotifier {
   List<Baby> _babies = [];
   int _currentIndex = 0;
   SyncService? _syncService;
+  AnalyticsService? _analyticsService;
 
   List<Baby> get babies => _babies;
   Baby? get currentBaby => _babies.isEmpty ? null : _babies[_currentIndex];
@@ -16,6 +18,7 @@ class BabyProvider extends ChangeNotifier {
 
   void initSyncService(AuthService authService) {
     _syncService = SyncService(authService);
+    _analyticsService = AnalyticsService(authService);
   }
 
   void loadBabies() {
@@ -44,6 +47,10 @@ class BabyProvider extends ChangeNotifier {
     _currentIndex = _babies.length - 1;
     await StorageService.saveBabies(_babies);
     _syncService?.syncBabyToSupabase(baby);
+    _analyticsService?.log(AnalyticsService.addBaby, AnalyticsService.usage, properties: {
+      'baby_id': baby.id,
+      'baby_name': baby.name,
+    });
     notifyListeners();
   }
 
@@ -67,6 +74,9 @@ class BabyProvider extends ChangeNotifier {
     }
     await StorageService.saveBabies(_babies);
     _syncService?.deleteBabyFromSupabase(id);
+    _analyticsService?.log(AnalyticsService.removeBaby, AnalyticsService.usage, properties: {
+      'baby_id': id,
+    });
     notifyListeners();
   }
 

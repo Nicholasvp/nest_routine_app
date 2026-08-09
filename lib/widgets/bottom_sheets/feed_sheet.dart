@@ -6,6 +6,7 @@ import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/strings.dart';
+import '../event_success_toast.dart';
 
 class FeedSheet extends StatefulWidget {
   final BabyEvent? activeTimer;
@@ -147,6 +148,13 @@ class _FeedSheetState extends State<FeedSheet> {
                     onPressed: () {
                       widget.onStopNursing(DateTime.now(), _feedSide);
                       Navigator.of(context).pop();
+                      EventSuccessToast.show(
+                        context,
+                        icon: Icons.local_dining_outlined,
+                        color: AppColors.feedOrange,
+                        title: strings.stopNursing,
+                        subtitle: 'Feed logged',
+                      );
                     },
                     icon: const Icon(Icons.stop_circle_outlined, size: 18),
                     label: Text(strings.stopNursing,
@@ -479,6 +487,13 @@ class _FeedSheetState extends State<FeedSheet> {
             onPressed: () {
               widget.onStartNursing(DateTime.now(), null);
               Navigator.of(context).pop();
+              EventSuccessToast.show(
+                context,
+                icon: Icons.local_dining_outlined,
+                color: AppColors.feedOrange,
+                title: strings.babyStartedNursing,
+                subtitle: 'Feed timer started',
+              );
             },
             icon: const Icon(Icons.play_circle_outlined, size: 20),
             label: Text(strings.babyStartedNursing,
@@ -624,6 +639,13 @@ class _FeedSheetState extends State<FeedSheet> {
     );
     widget.onLogFeed(event);
     Navigator.of(context).pop();
+    EventSuccessToast.show(
+      context,
+      icon: Icons.local_dining_outlined,
+      color: AppColors.feedOrange,
+      title: 'Feed logged',
+      subtitle: _feedType == FeedType.breast ? '${_durationMinutes}min' : '$_volumeMl ml',
+    );
   }
 
   void _saveEdit() {
@@ -639,6 +661,13 @@ class _FeedSheetState extends State<FeedSheet> {
       );
       widget.onUpdateFeed!(updated);
       Navigator.of(context).pop();
+      EventSuccessToast.show(
+        context,
+        icon: Icons.local_dining_outlined,
+        color: AppColors.feedOrange,
+        title: 'Feed updated',
+        subtitle: '$duration min',
+      );
     }
   }
 

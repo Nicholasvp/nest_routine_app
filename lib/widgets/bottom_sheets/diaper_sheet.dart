@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
+import '../event_success_toast.dart';
 
 class DiaperSheet extends StatefulWidget {
   final BabyEvent? event;
@@ -283,6 +284,13 @@ class _DiaperSheetState extends State<DiaperSheet> {
       );
       widget.onUpdateDiaper!(updated);
       Navigator.of(context).pop();
+      EventSuccessToast.show(
+        context,
+        icon: Icons.baby_changing_station_outlined,
+        color: AppColors.diaperTeal,
+        title: 'Diaper updated',
+        subtitle: _getDiaperLabel(),
+      );
     } else {
       final event = BabyEvent(
         id: '',
@@ -299,7 +307,20 @@ class _DiaperSheetState extends State<DiaperSheet> {
       );
       widget.onLogDiaper(event);
       Navigator.of(context).pop();
+      EventSuccessToast.show(
+        context,
+        icon: Icons.baby_changing_station_outlined,
+        color: AppColors.diaperTeal,
+        title: 'Diaper logged',
+        subtitle: _getDiaperLabel(),
+      );
     }
+  }
+
+  String _getDiaperLabel() {
+    if (_hasPee && _hasPoop) return 'Pee & Poop';
+    if (_hasPee) return 'Pee';
+    return 'Poop';
   }
 }
 

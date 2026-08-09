@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import '../models/event.dart';
@@ -8,6 +7,7 @@ import '../utils/storage_service.dart';
 import '../services/widget_service.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
+import '../services/analytics_service.dart';
 import 'notification_provider.dart';
 
 class EventProvider extends ChangeNotifier {
@@ -18,6 +18,7 @@ class EventProvider extends ChangeNotifier {
   BabyEvent? _activeFeedTimer;
   NotificationProvider? _notificationProvider;
   SyncService? _syncService;
+  AnalyticsService? _analyticsService;
 
   BabyEvent? get activeSleepTimer => _activeSleepTimer;
   BabyEvent? get activeFeedTimer => _activeFeedTimer;
@@ -28,6 +29,7 @@ class EventProvider extends ChangeNotifier {
 
   void initSyncService(AuthService authService) {
     _syncService = SyncService(authService);
+    _analyticsService = AnalyticsService(authService);
   }
 
   List<BabyEvent> getEvents(String babyId) {
@@ -167,6 +169,11 @@ class EventProvider extends ChangeNotifier {
     _updateActiveTimers(event.babyId);
     await StorageService.saveEvents(event.babyId, _eventsByBaby[event.babyId]!);
     _syncService?.syncEventToSupabase(event);
+    _analyticsService?.log(AnalyticsService.addEvent, AnalyticsService.usage, properties: {
+      'event_id': event.id,
+      'baby_id': event.babyId,
+      'event_type': event.type.name,
+    });
     notifyListeners();
     _refreshWidget(event.babyId);
 
@@ -188,6 +195,10 @@ class EventProvider extends ChangeNotifier {
     _startTickTimer();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(event);
+    _analyticsService?.log(AnalyticsService.startSleep, AnalyticsService.usage, properties: {
+      'event_id': event.id,
+      'baby_id': babyId,
+    });
     notifyListeners();
     _refreshWidget(babyId);
     return event;
@@ -207,6 +218,11 @@ class EventProvider extends ChangeNotifier {
     _updateTickTimerState();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(updated);
+    _analyticsService?.log(AnalyticsService.stopSleep, AnalyticsService.usage, properties: {
+      'event_id': updated.id,
+      'baby_id': babyId,
+      'duration_minutes': updated.duration?.inMinutes,
+    });
     notifyListeners();
     _refreshWidget(babyId);
   }
@@ -225,6 +241,10 @@ class EventProvider extends ChangeNotifier {
     _startTickTimer();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(event);
+    _analyticsService?.log(AnalyticsService.startFeed, AnalyticsService.usage, properties: {
+      'event_id': event.id,
+      'baby_id': babyId,
+    });
     notifyListeners();
     _refreshWidget(babyId);
     return event;
@@ -265,6 +285,13 @@ class EventProvider extends ChangeNotifier {
     _updateTickTimerState();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(updated);
+    _analyticsService?.log(AnalyticsService.stopFeed, AnalyticsService.usage, properties: {
+      'event_id': updated.id,
+      'baby_id': babyId,
+      'duration_minutes': updated.durationMinutes,
+      'feed_type': updated.feedType?.name,
+      'feed_side': updated.feedSide?.name,
+    });
     notifyListeners();
     _refreshWidget(babyId);
   }
@@ -337,7 +364,8 @@ class EventProvider extends ChangeNotifier {
       totalMinutes +=
           DateTime.now().difference(_activeSleepTimer!.startTime).inMinutes;
     }
-    return totalMinutes / 60;
+    final hours = totalMinutes / 60;
+    return hours.clamp(0.0, 24.0);
   }
 
   double getTotalSleepForDay(String babyId, DateTime day) {
@@ -357,7 +385,8 @@ class EventProvider extends ChangeNotifier {
         }
       }
     }
-    return totalMinutes / 60;
+    final hours = totalMinutes / 60;
+    return hours.clamp(0.0, 24.0);
   }
 
   double getAverageSleepPerDay(String babyId, {int days = 7}) {
@@ -367,7 +396,8 @@ class EventProvider extends ChangeNotifier {
       final day = now.subtract(Duration(days: i));
       total += getTotalSleepForDay(babyId, day);
     }
-    return total / days;
+    final avg = total / days;
+    return avg.clamp(0.0, 24.0);
   }
 
   double getAverageFeedInterval(String babyId, {int days = 3}) {

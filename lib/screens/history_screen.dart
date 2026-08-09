@@ -28,10 +28,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
     _currentDay = ValueNotifier<DateTime>(DateTime.now());
+    _currentDay.addListener(_onDayChanged);
+  }
+
+  void _onDayChanged() {
+    setState(() {});
   }
 
   @override
   void dispose() {
+    _currentDay.removeListener(_onDayChanged);
     _currentDay.dispose();
     super.dispose();
   }
@@ -69,38 +75,54 @@ class _HistoryScreenState extends State<HistoryScreen> {
               builder: (context, day, __) {
                 final events =
                     eventProvider.getEventsForDay(baby.id, day);
-                if (events.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.history_outlined,
-                            size: 48,
-                            color: AppColors.textTertiary
-                                .withValues(alpha: 0.5)),
-                        const SizedBox(height: 12),
-                        Text(
-                          strings.noEventsForDay,
-                          style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 15),
-                        ),
-                      ],
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.05, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8, bottom: 80),
-                  itemCount: events.length,
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    return EventCard(
-                      event: event,
-                      onTap: () => _showEditEventSheet(
-                          context, eventProvider, event),
-                      onDelete: () => _confirmDelete(
-                          context, eventProvider, event),
-                    );
-                  },
+                  ),
+                  child: events.isEmpty
+                      ? Center(
+                          key: ValueKey('empty_$day'),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.history_outlined,
+                                  size: 48,
+                                  color: AppColors.textTertiary
+                                      .withValues(alpha: 0.5)),
+                              const SizedBox(height: 12),
+                              Text(
+                                strings.noEventsForDay,
+                                style: const TextStyle(
+                                    color: AppColors.textTertiary, fontSize: 15),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          key: ValueKey('list_$day'),
+                          padding: const EdgeInsets.only(top: 8, bottom: 80),
+                          itemCount: events.length,
+                          itemBuilder: (context, index) {
+                            final event = events[index];
+                            return EventCard(
+                              event: event,
+                              onTap: () => _showEditEventSheet(
+                                  context, eventProvider, event),
+                              onDelete: () => _confirmDelete(
+                                  context, eventProvider, event),
+                            );
+                          },
+                        ),
                 );
               },
             ),
