@@ -142,6 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildSetupPage(BuildContext context, Strings strings) {
+    final isPt = context.read<LocaleProvider>().isPortuguese;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -217,7 +218,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               color: AppColors.textSecondary, fontSize: 12)),
                       const SizedBox(height: 2),
                       Text(
-                        DateFormat('MMMM d, yyyy').format(_dob),
+                        DateFormat('MMMM d, yyyy', isPt ? 'pt_BR' : 'en').format(_dob),
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 17,

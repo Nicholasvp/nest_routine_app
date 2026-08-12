@@ -13,6 +13,8 @@ class StorageService {
     _eventsBox = await Hive.openBox('events');
   }
 
+  static Box get settingsBox => _settingsBox;
+
   static bool get isOnboardingComplete =>
       _settingsBox.get('onboarding_complete', defaultValue: false) as bool;
 

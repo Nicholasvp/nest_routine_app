@@ -6,6 +6,7 @@ import '../models/event.dart';
 import '../providers/baby_provider.dart';
 import '../providers/event_provider.dart';
 import '../providers/locale_provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/prediction_engine.dart';
 import '../utils/sleep_window.dart';
@@ -18,6 +19,8 @@ import '../widgets/bottom_sheets/feed_sheet.dart';
 import '../widgets/bottom_sheets/diaper_sheet.dart';
 import '../widgets/bottom_sheets/bug_report_sheet.dart';
 import '../services/navigation_service.dart';
+import '../services/analytics_service.dart';
+import '../services/review_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,6 +49,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _checkReviewPrompt(EventProvider eventProvider) {
+    if (eventProvider.shouldShowReview) {
+      eventProvider.consumeReviewPrompt();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final totalEvents = eventProvider.getAllEventsCount();
+        final authProvider = context.read<AuthProvider>();
+        final analytics = AnalyticsService(authProvider.authService);
+        ReviewService.showReviewPrompt(
+          context,
+          totalEvents: totalEvents,
+          analytics: analytics,
+        );
+      });
+    }
+  }
+
   @override
   void dispose() {
     _pulseController.dispose();
@@ -58,6 +78,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final eventProvider = context.watch<EventProvider>();
     final baby = babyProvider.currentBaby;
     final tr = context.watch<LocaleProvider>().strings;
+
+    _checkReviewPrompt(eventProvider);
 
     if (baby == null) {
       return Scaffold(
@@ -187,14 +209,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: CircularTimeline(
-        todayEvents: todayEvents,
-        activeSleep: activeSleep,
-        pulseScale: activeSleep != null ? _pulseAnimation.value : null,
-        glowRadius: activeSleep != null ? _glowAnimation.value : null,
-        onTap: () =>
-            _showSleepSheet(context, eventProvider, activeSleep),
-      ),
+      child: activeSleep != null
+          ? AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                return CircularTimeline(
+                  todayEvents: todayEvents,
+                  activeSleep: activeSleep,
+                  pulseScale: _pulseAnimation.value,
+                  glowRadius: _glowAnimation.value,
+                  onTap: () =>
+                      _showSleepSheet(context, eventProvider, activeSleep),
+                );
+              },
+            )
+          : CircularTimeline(
+              todayEvents: todayEvents,
+              activeSleep: activeSleep,
+              onTap: () =>
+                  _showSleepSheet(context, eventProvider, activeSleep),
+            ),
     );
   }
 
@@ -219,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: _PredictionCard(
                   icon: Icons.nightlight_round,
                   label: tr.nextNap,
-                  value: nextNap.timeUntilLabel,
+                  value: nextNap.timeUntilLabel(tr.noPrediction, tr.late),
                   color: AppColors.sleepPurple,
                   confidence: nextNap.confidencePercent,
                   onTap: onNapTap,
@@ -230,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: _PredictionCard(
                   icon: Icons.local_dining_outlined,
                   label: tr.nextFeed,
-                  value: nextFeed.timeUntilLabel,
+                  value: nextFeed.timeUntilLabel(tr.noPrediction, tr.late),
                   color: AppColors.feedOrange,
                   confidence: nextFeed.confidencePercent,
                   onTap: onFeedTap,
@@ -245,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: _PredictionCard(
                   icon: Icons.cleaning_services_outlined,
                   label: tr.nextDiaper,
-                  value: nextDiaper.timeUntilLabel,
+                  value: nextDiaper.timeUntilLabel(tr.noPrediction, tr.late),
                   color: AppColors.diaperTeal,
                   confidence: nextDiaper.confidencePercent,
                   onTap: onDiaperTap,

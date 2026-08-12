@@ -115,9 +115,9 @@ class EventCard extends StatelessWidget {
   }
 
   String _subtitle(Strings strings) {
-    final time = AppDateUtils.formatTime(event.startTime);
+    final time = AppDateUtils.formatTime(event.startTime, isPt: strings.pt);
     final datePart =
-        showDate ? ' ${AppDateUtils.formatDate(event.startTime)}' : '';
+        showDate ? ' ${AppDateUtils.formatDate(event.startTime, isPt: strings.pt)}' : '';
 
     if (event.type == EventType.feed) {
       final details = <String>[];

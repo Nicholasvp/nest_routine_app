@@ -46,7 +46,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     final babyProvider = context.watch<BabyProvider>();
     final eventProvider = context.watch<EventProvider>();
-    final strings = context.read<LocaleProvider>().strings;
+    final localeProvider = context.read<LocaleProvider>();
+    final strings = localeProvider.strings;
+    final isPt = localeProvider.isPortuguese;
     final baby = babyProvider.currentBaby;
 
     if (baby == null) {
@@ -58,7 +60,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppDateUtils.formatDateFull(_currentDay.value)),
+        title: Text(AppDateUtils.formatDateFull(_currentDay.value, isPt: isPt)),
         centerTitle: true,
         leading: GestureDetector(
           onTap: () => NavigationService.goToHome(),
@@ -136,6 +138,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       EventProvider eventProvider, String babyId) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final isPt = context.read<LocaleProvider>().isPortuguese;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -190,7 +193,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('MMM d, yyyy').format(_currentDay.value),
+                      DateFormat('MMM d, yyyy', isPt ? 'pt_BR' : 'en').format(_currentDay.value),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 14,

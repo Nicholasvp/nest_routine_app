@@ -28,9 +28,9 @@ class Baby {
 
   String get ageLabel {
     if (ageInMonths < 1) {
-      return '$ageInWeeks weeks old';
+      return '$ageInWeeks semanas';
     }
-    return '$ageInMonths months old';
+    return '$ageInMonths meses';
   }
 
   Map<String, dynamic> toJson() => {
@@ -44,9 +44,9 @@ class Baby {
   factory Baby.fromJson(Map<String, dynamic> json) => Baby(
         id: json['id'] as String,
         name: json['name'] as String,
-        photoPath: json['photoPath'] as String?,
-        dateOfBirth: DateTime.parse(json['dateOfBirth'] as String),
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        photoPath: (json['photoPath'] ?? json['photo_path']) as String?,
+        dateOfBirth: DateTime.parse((json['dateOfBirth'] ?? json['date_of_birth']) as String),
+        createdAt: DateTime.parse((json['createdAt'] ?? json['created_at']) as String),
       );
 
   Baby copyWith({

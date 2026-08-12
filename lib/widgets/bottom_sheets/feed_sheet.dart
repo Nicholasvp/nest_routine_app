@@ -202,7 +202,7 @@ class _FeedSheetState extends State<FeedSheet> {
           ),
           const SizedBox(height: 8),
           Text(
-            strings.sinceTime(AppDateUtils.formatTimeAmPm(widget.activeTimer!.startTime)),
+            strings.sinceTime(AppDateUtils.formatTimeAmPm(widget.activeTimer!.startTime, isPt: strings.pt)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

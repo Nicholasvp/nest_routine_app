@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'package:home_widget/home_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/adapters/adapters.dart';
 import 'providers/auth_provider.dart';
@@ -28,8 +28,8 @@ import 'utils/storage_service.dart';
 import 'services/notification_service.dart';
 import 'services/navigation_service.dart';
 import 'services/purchase_service.dart';
-import 'services/widget_service.dart';
 import 'services/analytics_service.dart';
+import 'services/review_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,10 +49,10 @@ void main() async {
   Hive.registerAdapter(FeedSideAdapter());
   Hive.registerAdapter(DiaperTextureAdapter());
   await StorageService.init();
+  await initializeDateFormatting();
+  await ReviewService.init();
 
   await NotificationService.initialize();
-  await WidgetService.init();
-
   try {
     final isProduction = !kDebugMode;
     final revenueCatKey = isProduction
@@ -143,33 +143,8 @@ class _AppNavigatorState extends State<_AppNavigator> {
         babyProvider.loadBabiesFromCloud();
       }
 
-      HomeWidget.widgetClicked.listen((uri) {
-        _handleWidgetAction(uri);
-      });
 
-      HomeWidget.initiallyLaunchedFromHomeWidget().then((uri) {
-        if (uri != null) _handleWidgetAction(uri);
-      });
     });
-  }
-
-  void _handleWidgetAction(Uri? uri) {
-    if (uri == null || !mounted) return;
-    final action = uri.host;
-    switch (action) {
-      case 'sleep':
-        NavigationService.goToHome();
-        break;
-      case 'feed':
-        NavigationService.goToHome();
-        break;
-      case 'diaper':
-        NavigationService.goToHome();
-        break;
-      case 'wake':
-        NavigationService.goToHome();
-        break;
-    }
   }
 
   void _checkOnboarding() {

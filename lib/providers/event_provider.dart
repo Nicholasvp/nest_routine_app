@@ -4,10 +4,11 @@ import 'package:uuid/uuid.dart';
 import '../models/event.dart';
 import '../utils/prediction_engine.dart';
 import '../utils/storage_service.dart';
-import '../services/widget_service.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
 import '../services/analytics_service.dart';
+import '../services/review_service.dart';
+import '../services/widget_service.dart';
 import 'notification_provider.dart';
 
 class EventProvider extends ChangeNotifier {
@@ -559,6 +560,23 @@ class EventProvider extends ChangeNotifier {
   double getAverageFeedsPerDay(String babyId, {int days = 7}) {
     final total = getTotalFeeds(babyId, days: days);
     return total / days;
+  }
+
+  bool get shouldShowReview {
+    final total = getAllEventsCount();
+    return ReviewService.shouldShowPrompt(total);
+  }
+
+  void consumeReviewPrompt() {
+    // No-op - review prompt is managed by ReviewService
+  }
+
+  int getAllEventsCount() {
+    int total = 0;
+    for (final events in _eventsByBaby.values) {
+      total += events.length;
+    }
+    return total;
   }
 
   @override

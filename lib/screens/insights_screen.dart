@@ -47,6 +47,7 @@ class _InsightsScreenState extends State<InsightsScreen>
     final eventProvider = context.watch<EventProvider>();
     final baby = babyProvider.currentBaby;
     final strings = context.read<LocaleProvider>().strings;
+    final isPt = context.read<LocaleProvider>().isPortuguese;
     final isPro = context.watch<SubscriptionProvider>().isPro;
 
     if (baby == null) {
@@ -57,7 +58,7 @@ class _InsightsScreenState extends State<InsightsScreen>
     }
 
     if (!isPro) {
-      return _buildProGate(context, baby, eventProvider, strings);
+      return _buildProGate(context, baby, eventProvider, strings, isPt);
     }
 
     return Scaffold(
@@ -87,9 +88,9 @@ class _InsightsScreenState extends State<InsightsScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
-                _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
-                _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
+                _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
+                _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
+                _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
               ],
             ),
           ),
@@ -98,7 +99,7 @@ class _InsightsScreenState extends State<InsightsScreen>
     );
   }
 
-  Widget _buildProGate(BuildContext context, Baby baby, EventProvider eventProvider, Strings strings) {
+  Widget _buildProGate(BuildContext context, Baby baby, EventProvider eventProvider, Strings strings, bool isPt) {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.analytics),
@@ -133,9 +134,9 @@ class _InsightsScreenState extends State<InsightsScreen>
                       child: TabBarView(
                         controller: _tabController,
                         children: [
-                          _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
-                          _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
-                          _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays),
+                          _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
+                          _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
+                          _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
                         ],
                       ),
                     ),
@@ -288,11 +289,13 @@ class _SleepTab extends StatelessWidget {
   final Baby baby;
   final EventProvider eventProvider;
   final int days;
+  final bool isPt;
 
   const _SleepTab({
     required this.baby,
     required this.eventProvider,
     required this.days,
+    required this.isPt,
   });
 
   @override
@@ -319,13 +322,13 @@ class _SleepTab extends StatelessWidget {
             _MetricData(
               icon: Icons.bedtime_outlined,
               label: strings.avgSleepPerDay,
-              value: '${avgSleep.toStringAsFixed(1)}h',
+              value: '${avgSleep.round()}h',
               color: AppColors.sleepPurple,
             ),
             _MetricData(
               icon: Icons.water_drop_outlined,
               label: strings.todayLabel,
-              value: '${todaySleep.toStringAsFixed(1)}h',
+              value: '${todaySleep.round()}h',
               color: AppColors.diaperTeal,
             ),
             _MetricData(
@@ -376,7 +379,7 @@ class _SleepTab extends StatelessWidget {
                     ),
               ),
               Text(
-                strings.avgLabel('${avgSleep.toStringAsFixed(1)}h'),
+                strings.avgLabel('${avgSleep.round()}h'),
                 style: const TextStyle(
                     color: AppColors.sleepPurple,
                     fontSize: 14,
@@ -397,7 +400,7 @@ class _SleepTab extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final day = entries[group.x.toInt()].key;
                       return BarTooltipItem(
-                        '${AppDateUtils.formatDate(day)}\n${rod.toY.toStringAsFixed(1)}h',
+                        '${AppDateUtils.formatDate(day, isPt: isPt)}\n${rod.toY.toStringAsFixed(1)}h',
                         const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12),
                       );
@@ -416,7 +419,7 @@ class _SleepTab extends StatelessWidget {
                         }
                         final day = entries[value.toInt()].key;
                         return Text(
-                          DateFormat('E').format(day).substring(0, 2),
+                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(day).substring(0, 2),
                           style: const TextStyle(
                               color: AppColors.textTertiary, fontSize: 10),
                         );
@@ -536,8 +539,8 @@ class _SleepTab extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   isGood
-                      ? strings.sleepingWell(recommended, ageMonths)
-                      : strings.sleepingOff(avgSleep, recommended, ageMonths),
+                      ? strings.sleepingWell(recommended.round(), ageMonths)
+                      : strings.sleepingOff(avgSleep.round(), recommended.round(), ageMonths),
                   style: const TextStyle(
                       color: AppColors.textPrimary, fontSize: 13, height: 1.3),
                 ),
@@ -580,7 +583,7 @@ class _SleepTab extends StatelessWidget {
                         color: AppColors.textSecondary, fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(
-                  prediction.timeUntilLabel,
+                  prediction.timeUntilLabel(strings.noPrediction, strings.late),
                   style: TextStyle(
                     color: color,
                     fontSize: 22,
@@ -616,11 +619,13 @@ class _FeedTab extends StatelessWidget {
   final Baby baby;
   final EventProvider eventProvider;
   final int days;
+  final bool isPt;
 
   const _FeedTab({
     required this.baby,
     required this.eventProvider,
     required this.days,
+    required this.isPt,
   });
 
   @override
@@ -727,7 +732,7 @@ class _FeedTab extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final day = entries[group.x.toInt()].key;
                       return BarTooltipItem(
-                        '${AppDateUtils.formatDate(day)}\n${strings.feedsCount(rod.toY.toInt())}',
+                        '${AppDateUtils.formatDate(day, isPt: isPt)}\n${strings.feedsCount(rod.toY.toInt())}',
                         const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12),
                       );
@@ -746,7 +751,7 @@ class _FeedTab extends StatelessWidget {
                         }
                         final day = entries[value.toInt()].key;
                         return Text(
-                          DateFormat('E').format(day).substring(0, 2),
+                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(day).substring(0, 2),
                           style: const TextStyle(
                               color: AppColors.textTertiary, fontSize: 10),
                         );
@@ -843,7 +848,7 @@ class _FeedTab extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final day = entries[group.x.toInt()].key;
                       return BarTooltipItem(
-                        '${AppDateUtils.formatDate(day)}\n${rod.toY.toInt()}ml',
+                        '${AppDateUtils.formatDate(day, isPt: isPt)}\n${rod.toY.toInt()}ml',
                         const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12),
                       );
@@ -861,7 +866,7 @@ class _FeedTab extends StatelessWidget {
                           return const SizedBox.shrink();
                         }
                         return Text(
-                          DateFormat('E').format(entries[value.toInt()].key).substring(0, 2),
+                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(entries[value.toInt()].key).substring(0, 2),
                           style: const TextStyle(
                               color: AppColors.textTertiary, fontSize: 9),
                         );
@@ -1027,7 +1032,7 @@ class _FeedTab extends StatelessWidget {
                         color: AppColors.textSecondary, fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(
-                  prediction.timeUntilLabel,
+                  prediction.timeUntilLabel(strings.noPrediction, strings.late),
                   style: TextStyle(
                     color: color,
                     fontSize: 22,
@@ -1054,11 +1059,13 @@ class _DiaperTab extends StatelessWidget {
   final Baby baby;
   final EventProvider eventProvider;
   final int days;
+  final bool isPt;
 
   const _DiaperTab({
     required this.baby,
     required this.eventProvider,
     required this.days,
+    required this.isPt,
   });
 
   @override
@@ -1164,7 +1171,7 @@ class _DiaperTab extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final day = entries[group.x.toInt()].key;
                       return BarTooltipItem(
-                        '${AppDateUtils.formatDate(day)}\n${strings.changesCount(rod.toY.toInt())}',
+                        '${AppDateUtils.formatDate(day, isPt: isPt)}\n${strings.changesCount(rod.toY.toInt())}',
                         const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12),
                       );
@@ -1183,7 +1190,7 @@ class _DiaperTab extends StatelessWidget {
                         }
                         final day = entries[value.toInt()].key;
                         return Text(
-                          DateFormat('E').format(day).substring(0, 2),
+                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(day).substring(0, 2),
                           style: const TextStyle(
                               color: AppColors.textTertiary, fontSize: 10),
                         );
@@ -1466,7 +1473,7 @@ class _DiaperTab extends StatelessWidget {
                         color: AppColors.textSecondary, fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(
-                  prediction.timeUntilLabel,
+                  prediction.timeUntilLabel(strings.noPrediction, strings.late),
                   style: TextStyle(
                     color: color,
                     fontSize: 22,

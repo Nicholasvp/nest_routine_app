@@ -3,28 +3,34 @@ import 'package:intl/intl.dart';
 class AppDateUtils {
   AppDateUtils._();
 
-  static String formatTime(DateTime dt) {
-    return DateFormat('HH:mm').format(dt);
+  static String _localeCode(bool isPt) => isPt ? 'pt_BR' : 'en';
+
+  static String formatTime(DateTime dt, {bool isPt = false}) {
+    return DateFormat('HH:mm', _localeCode(isPt)).format(dt);
   }
 
-  static String formatTimeAmPm(DateTime dt) {
-    return DateFormat('h:mm a').format(dt);
+  static String formatTimeAmPm(DateTime dt, {bool isPt = false}) {
+    return DateFormat('h:mm a', _localeCode(isPt)).format(dt);
   }
 
-  static String formatDate(DateTime dt) {
+  static String formatDate(DateTime dt, {bool isPt = false}) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final date = DateTime(dt.year, dt.month, dt.day);
 
-    if (date == today) return 'Today';
-    if (date == today.subtract(const Duration(days: 1))) return 'Yesterday';
-    if (date == today.add(const Duration(days: 1))) return 'Tomorrow';
+    if (date == today) return isPt ? 'Hoje' : 'Today';
+    if (date == today.subtract(const Duration(days: 1))) {
+      return isPt ? 'Ontem' : 'Yesterday';
+    }
+    if (date == today.add(const Duration(days: 1))) {
+      return isPt ? 'Amanhã' : 'Tomorrow';
+    }
 
-    return DateFormat('MMM d').format(dt);
+    return DateFormat('MMM d', _localeCode(isPt)).format(dt);
   }
 
-  static String formatDateFull(DateTime dt) {
-    return DateFormat('EEEE, MMMM d, yyyy').format(dt);
+  static String formatDateFull(DateTime dt, {bool isPt = false}) {
+    return DateFormat('EEEE, MMMM d, yyyy', _localeCode(isPt)).format(dt);
   }
 
   static String formatDuration(Duration d) {
@@ -34,12 +40,16 @@ class AppDateUtils {
     return '${d.inMinutes}min';
   }
 
-  static String formatTimeAgo(DateTime dt) {
+  static String formatTimeAgo(DateTime dt, {bool isPt = false}) {
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}min ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return isPt ? 'agora' : 'just now';
+    if (diff.inMinutes < 60) {
+      return isPt ? '${diff.inMinutes}min atrás' : '${diff.inMinutes}min ago';
+    }
+    if (diff.inHours < 24) {
+      return isPt ? '${diff.inHours}h atrás' : '${diff.inHours}h ago';
+    }
+    return isPt ? '${diff.inDays}d atrás' : '${diff.inDays}d ago';
   }
 
   static DateTime get startOfToday =>

@@ -101,26 +101,26 @@ class BabyEvent {
 
   factory BabyEvent.fromJson(Map<String, dynamic> json) => BabyEvent(
         id: json['id'] as String,
-        babyId: json['babyId'] as String,
+        babyId: (json['babyId'] ?? json['baby_id']) as String,
         type: EventType.values.firstWhere((e) => e.name == json['type']),
-        startTime: DateTime.parse(json['startTime'] as String),
-        endTime: json['endTime'] != null
-            ? DateTime.parse(json['endTime'] as String)
+        startTime: DateTime.parse((json['startTime'] ?? json['start_time']) as String),
+        endTime: (json['endTime'] ?? json['end_time']) != null
+            ? DateTime.parse(((json['endTime'] ?? json['end_time']) as String))
             : null,
         notes: json['notes'] as String?,
-        feedType: json['feedType'] != null
-            ? FeedType.values.firstWhere((e) => e.name == json['feedType'])
+        feedType: (json['feedType'] ?? json['feed_type']) != null
+            ? FeedType.values.firstWhere((e) => e.name == (json['feedType'] ?? json['feed_type']))
             : null,
-        feedSide: json['feedSide'] != null
-            ? FeedSide.values.firstWhere((e) => e.name == json['feedSide'])
+        feedSide: (json['feedSide'] ?? json['feed_side']) != null
+            ? FeedSide.values.firstWhere((e) => e.name == (json['feedSide'] ?? json['feed_side']))
             : null,
-        durationMinutes: json['durationMinutes'] as int?,
-        volumeMl: json['volumeMl'] as int?,
-        hasPee: json['hasPee'] as bool? ?? false,
-        hasPoop: json['hasPoop'] as bool? ?? false,
-        diaperTexture: json['diaperTexture'] != null
+        durationMinutes: (json['durationMinutes'] ?? json['duration_minutes']) as int?,
+        volumeMl: (json['volumeMl'] ?? json['volume_ml']) as int?,
+        hasPee: (json['hasPee'] ?? json['has_pee']) as bool? ?? false,
+        hasPoop: (json['hasPoop'] ?? json['has_poop']) as bool? ?? false,
+        diaperTexture: (json['diaperTexture'] ?? json['diaper_texture']) != null
             ? DiaperTexture.values
-                .firstWhere((e) => e.name == json['diaperTexture'])
+                .firstWhere((e) => e.name == (json['diaperTexture'] ?? json['diaper_texture']))
             : null,
       );
 

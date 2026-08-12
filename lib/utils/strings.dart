@@ -72,15 +72,17 @@ class Strings {
   String get avgSleepPerDay => get('Avg sleep/day', 'Média sono/dia');
   String get sleepHours => get('Sleep Hours', 'Horas de Sono');
   String get vsRecommendedSleep => get('vs Recommended Sleep', 'vs Sono Recomendado');
-  String sleepingWell(double h, int m) => get(
+  String sleepingWell(int h, int m) => get(
     'Your baby is sleeping within the recommended range of ${h}h for $m months.',
     'Seu bebê está dormindo dentro da faixa recomendada de ${h}h para $m meses.',
   );
-  String sleepingOff(double avg, double h, int m) => get(
+  String sleepingOff(int avg, int h, int m) => get(
     'Average sleep is ${avg}h (recommended: ${h}h for $m months)',
     'Média de sono é ${avg}h (recomendado: ${h}h para $m meses)',
   );
   String get predictions => get('Predictions', 'Previsões');
+  String get noPrediction => get('No prediction', 'Sem previsão');
+  String get late => get('Late', 'Atrasado');
 
   // ── Quick Action Bar ──
   String get awake => get('Awake', 'Acordou');
@@ -324,4 +326,7 @@ class Strings {
   String get bugTitleRequired => get('Please enter a title', 'Por favor, digite um título');
   String get bugDescriptionRequired => get('Please describe the issue', 'Por favor, descreva o problema');
   String get reportBugHome => get('Found a bug? Tell us', 'Encontrou um bug? Conte-nos');
+
+  // ── Review ──
+  String get rateApp => get('Rate NestRoutine', 'Avaliar NestRoutine');
 }

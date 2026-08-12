@@ -11,10 +11,10 @@ class PredictionResult {
     this.confidencePercent = 0,
   });
 
-  String get timeUntilLabel {
-    if (predictedTime == null) return 'No prediction';
+  String timeUntilLabel(String noPrediction, String late) {
+    if (predictedTime == null) return noPrediction;
     final diff = predictedTime!.difference(DateTime.now());
-    if (diff.isNegative) return 'Overdue';
+    if (diff.isNegative) return late;
     if (diff.inMinutes < 60) return '${diff.inMinutes}min';
     return '${diff.inHours}h ${diff.inMinutes.remainder(60)}min';
   }

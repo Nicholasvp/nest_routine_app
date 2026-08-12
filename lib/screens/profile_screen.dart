@@ -13,6 +13,7 @@ import '../utils/strings.dart';
 import 'notification_settings_screen.dart';
 import '../services/navigation_service.dart';
 import '../services/purchase_service.dart';
+import '../services/review_service.dart';
 import '../widgets/bottom_sheets/bug_report_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -111,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 4),
             Text(
-              strings.bornDate(DateFormat('MMM d, yyyy').format(baby.dateOfBirth)),
+              strings.bornDate(DateFormat('MMM d, yyyy', strings.pt ? 'pt_BR' : 'en').format(baby.dateOfBirth)),
               style: const TextStyle(
                   color: AppColors.textTertiary, fontSize: 13),
             ),
@@ -350,6 +351,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             trailing: const Icon(Icons.chevron_right_rounded,
                 color: AppColors.textTertiary, size: 20),
             onTap: () => _showBugReportSheet(context),
+          ),
+          const Divider(height: 1, color: AppColors.cardBorder),
+          _SettingsRow(
+            icon: Icons.star_outline_rounded,
+            label: strings.rateApp,
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textTertiary, size: 20),
+            onTap: () => ReviewService.requestReview(),
           ),
         ],
       ),
@@ -822,7 +831,7 @@ class _AddBabyFormState extends State<_AddBabyForm> {
                       style: const TextStyle(color: AppColors.textSecondary)),
                   const Spacer(),
                   Text(
-                    DateFormat('MMM d, yyyy').format(_dob),
+                    DateFormat('MMM d, yyyy', widget.strings.pt ? 'pt_BR' : 'en').format(_dob),
                     style: const TextStyle(color: AppColors.textPrimary),
                   ),
                 ],
@@ -942,7 +951,7 @@ class _EditBabyDialogState extends State<_EditBabyDialog> {
                   const Icon(Icons.calendar_today,
                       size: 18, color: AppColors.textSecondary),
                   const SizedBox(width: 12),
-                  Text(DateFormat('MMM d, yyyy').format(_selectedDate)),
+                  Text(DateFormat('MMM d, yyyy', strings.pt ? 'pt_BR' : 'en').format(_selectedDate)),
                 ],
               ),
             ),
