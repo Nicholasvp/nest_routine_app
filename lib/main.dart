@@ -140,11 +140,51 @@ class _AppNavigatorState extends State<_AppNavigator> {
       notificationProvider.setLocaleProvider(localeProvider);
 
       if (authProvider.isLoggedIn) {
-        babyProvider.loadBabiesFromCloud();
+        _syncDataFromCloud(authProvider, babyProvider, eventProvider);
       }
 
-
+      authProvider.authService.authStateChanges.listen((authState) {
+        if (!mounted) return;
+        if (authState.session != null) {
+          _syncDataFromCloud(authProvider, babyProvider, eventProvider);
+        } else {
+          babyProvider.clearBabies();
+          eventProvider.clearEvents();
+          _revenueCatLogOut();
+        }
+      });
     });
+  }
+
+  void _syncDataFromCloud(
+      AuthProvider authProvider, BabyProvider babyProvider, EventProvider eventProvider) {
+    final userId = authProvider.user?.id;
+    if (userId != null) {
+      _revenueCatLogIn(userId);
+    }
+    babyProvider.loadBabiesFromCloud().then((_) {
+      for (final baby in babyProvider.babies) {
+        eventProvider.loadEventsFromCloud(baby.id);
+      }
+    });
+  }
+
+  void _revenueCatLogIn(String userId) async {
+    try {
+      await Purchases.logIn(userId);
+      debugPrint('[RevenueCat] Logged in with userId: $userId');
+    } catch (e) {
+      debugPrint('[RevenueCat] logIn failed: $e');
+    }
+  }
+
+  void _revenueCatLogOut() async {
+    try {
+      await Purchases.logOut();
+      debugPrint('[RevenueCat] Logged out');
+    } catch (e) {
+      debugPrint('[RevenueCat] logOut failed: $e');
+    }
   }
 
   void _checkOnboarding() {
@@ -249,6 +289,9 @@ class _MainShellState extends State<MainShell> {
     final baby = context.read<BabyProvider>().currentBaby;
     if (baby != null) {
       context.read<EventProvider>().loadEvents(baby.id);
+      if (context.read<AuthProvider>().isLoggedIn) {
+        context.read<EventProvider>().loadEventsFromCloud(baby.id);
+      }
     }
   }
 

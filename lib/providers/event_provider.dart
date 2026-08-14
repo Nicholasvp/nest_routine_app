@@ -37,6 +37,14 @@ class EventProvider extends ChangeNotifier {
     return _eventsByBaby[babyId] ?? [];
   }
 
+  void clearEvents() {
+    _eventsByBaby.clear();
+    _activeSleepTimer = null;
+    _activeFeedTimer = null;
+    _stopTickTimer();
+    notifyListeners();
+  }
+
   List<BabyEvent> getTodayEvents(String babyId) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -77,6 +85,45 @@ class EventProvider extends ChangeNotifier {
     _eventsByBaby[babyId] = events;
     _updateActiveTimers(babyId);
     notifyListeners();
+  }
+
+  Future<void> loadEventsFromCloud(String babyId) async {
+    if (_syncService == null || !_syncService!.isLoggedIn) return;
+    try {
+      final cloudEvents = await _syncService!.loadEventsFromSupabase(babyId);
+      if (cloudEvents.isNotEmpty) {
+        final localEvents = _eventsByBaby[babyId] ?? [];
+        final merged = _mergeEvents(localEvents, cloudEvents);
+        _eventsByBaby[babyId] = merged;
+        await StorageService.saveEvents(babyId, merged);
+        _updateActiveTimers(babyId);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[EventProvider] Failed to load events from cloud: $e');
+    }
+  }
+
+  List<BabyEvent> _mergeEvents(List<BabyEvent> local, List<BabyEvent> cloud) {
+    final map = <String, BabyEvent>{};
+    for (final e in local) {
+      map[e.id] = e;
+    }
+    for (final e in cloud) {
+      final existing = map[e.id];
+      if (existing == null) {
+        map[e.id] = e;
+      } else {
+        final localTime = existing.endTime ?? existing.startTime;
+        final cloudTime = e.endTime ?? e.startTime;
+        if (cloudTime.isAfter(localTime)) {
+          map[e.id] = e;
+        }
+      }
+    }
+    final merged = map.values.toList();
+    merged.sort((a, b) => b.startTime.compareTo(a.startTime));
+    return merged;
   }
 
   void _refreshWidget(String babyId, {String? babyName}) {

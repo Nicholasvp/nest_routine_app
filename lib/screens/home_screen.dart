@@ -21,6 +21,9 @@ import '../widgets/bottom_sheets/bug_report_sheet.dart';
 import '../services/navigation_service.dart';
 import '../services/analytics_service.dart';
 import '../services/review_service.dart';
+import '../services/purchase_service.dart';
+import '../providers/subscription_provider.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -94,12 +97,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 tr.addBabyToStart,
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
               ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => NavigationService.goToProfile(),
+                icon: const Icon(Icons.add, size: 20),
+                label: Text(tr.addBaby),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.softLavender,
+                  foregroundColor: AppColors.textPrimary,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       );
     }
 
+    final isPro = context.watch<SubscriptionProvider>().isPro;
     final todayEvents = eventProvider.getTodayEvents(baby.id);
     final activeSleep = eventProvider.activeSleepTimer;
     final activeFeed = eventProvider.activeFeedTimer;
@@ -132,6 +150,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             context, eventProvider, baby.id, defaultPee: true),
                       ),
                     const SizedBox(height: 12),
+                    if (!isPro) ...[
+                      _buildNotificationCtaBanner(context),
+                      const SizedBox(height: 12),
+                    ],
                     _SleepWindowBatteryWidget(
                       ageMonths: baby.ageInMonths,
                       lastWakeUp: lastWakeUp,
@@ -581,6 +603,94 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Widget _buildNotificationCtaBanner(BuildContext context) {
+    final tr = context.watch<LocaleProvider>().strings;
+    return GestureDetector(
+      onTap: () => _openPaywall(context),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.sleepPurple.withValues(alpha: 0.15),
+              AppColors.sleepPurple.withValues(alpha: 0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.sleepPurple.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.sleepPurple.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.notifications_active_outlined,
+                color: AppColors.sleepPurple,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr.enableSmartNotifications,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    tr.homeNotificationCtaDesc,
+                    style: TextStyle(
+                      color: AppColors.textSecondary.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.sleepPurple.withValues(alpha: 0.7),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openPaywall(BuildContext context) async {
+    try {
+      final result = await RevenueCatUI.presentPaywallIfNeeded(
+        PurchaseService.proEntitlementId,
+        displayCloseButton: true,
+      );
+      if (!context.mounted) return;
+      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+        context.read<SubscriptionProvider>().refresh();
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Paywall error: $e');
+    }
   }
 
   void _confirmDelete(

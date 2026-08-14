@@ -299,6 +299,14 @@ class Strings {
     'Torne-se Pro para configurar lembretes\nde notificação inteligentes',
   );
 
+  // ── Home Notification CTA ──
+  String get enableSmartNotifications => get('Enable Smart Notifications', 'Ativar Notificações Inteligentes');
+  String get homeNotificationCtaDesc => get(
+    'Get reminded before the next nap or feeding. Never miss the perfect window!',
+    'Receba lembretes antes da próxima soneca ou mamada. Nunca perca a janela perfeita!',
+  );
+  String get activateNow => get('Activate Now', 'Ativar Agora');
+
   // ── Event Types ──
   String get eventTypeSleep => get('Sleep', 'Sono');
   String get eventTypeFeed => get('Feed', 'Mamada');

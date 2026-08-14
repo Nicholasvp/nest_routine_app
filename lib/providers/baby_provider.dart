@@ -26,6 +26,13 @@ class BabyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearBabies() {
+    _babies = [];
+    _currentIndex = 0;
+    StorageService.saveBabies(_babies);
+    notifyListeners();
+  }
+
   Future<void> loadBabiesFromCloud() async {
     if (_syncService == null || !_syncService!.isLoggedIn) return;
     final cloudBabies = await _syncService!.loadBabiesFromSupabase();

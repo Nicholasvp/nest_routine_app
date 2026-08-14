@@ -70,7 +70,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await _authService.signOut();
+    try {
+      await _authService.signOut();
+    } catch (e) {
+      debugPrint('[AuthProvider] signOut error: $e');
+    }
     _user = null;
     notifyListeners();
   }
