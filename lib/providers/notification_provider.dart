@@ -22,6 +22,13 @@ class NotificationProvider extends ChangeNotifier {
     if (data != null) {
       _settings = NotificationSettingsModel.fromMap(data);
     }
+    _checkRealPermission();
+    notifyListeners();
+  }
+
+  Future<void> _checkRealPermission() async {
+    await NotificationService.initialize();
+    _permissionGranted = await NotificationService.checkPermission();
     notifyListeners();
   }
 

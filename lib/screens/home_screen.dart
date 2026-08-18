@@ -23,6 +23,7 @@ import '../services/analytics_service.dart';
 import '../services/review_service.dart';
 import '../services/purchase_service.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/notification_provider.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -118,6 +119,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     final isPro = context.watch<SubscriptionProvider>().isPro;
+    final notificationsEnabled = context.watch<NotificationProvider>().permissionGranted;
     final todayEvents = eventProvider.getTodayEvents(baby.id);
     final activeSleep = eventProvider.activeSleepTimer;
     final activeFeed = eventProvider.activeFeedTimer;
@@ -150,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             context, eventProvider, baby.id, defaultPee: true),
                       ),
                     const SizedBox(height: 12),
-                    if (!isPro) ...[
+                    if (!isPro || !notificationsEnabled) ...[
                       _buildNotificationCtaBanner(context),
                       const SizedBox(height: 12),
                     ],
@@ -607,8 +609,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildNotificationCtaBanner(BuildContext context) {
     final tr = context.watch<LocaleProvider>().strings;
+    final isPro = context.watch<SubscriptionProvider>().isPro;
     return GestureDetector(
-      onTap: () => _openPaywall(context),
+      onTap: () {
+        if (!isPro) {
+          _openPaywall(context);
+        } else {
+          context.read<NotificationProvider>().requestPermission();
+        }
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.all(16),

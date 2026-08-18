@@ -14,9 +14,9 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
 
 SPEC CHECKSUMS:
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   flutter_local_notifications: 395056b3175ba4f08480a7c5de30cd36d69827e4
 
-PODFILE CHECKSUM: 288656d4464589360115d6f81dd5d8f559352730
+PODFILE CHECKSUM: 5442629a0e43310dea8d09b4a44dc727bc895bae
 
 COCOAPODS: 1.16.2
