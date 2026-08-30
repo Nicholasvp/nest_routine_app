@@ -37,16 +37,16 @@ class Baby {
         'id': id,
         'name': name,
         'photoPath': photoPath,
-        'dateOfBirth': dateOfBirth.toIso8601String(),
-        'createdAt': createdAt.toIso8601String(),
+        'dateOfBirth': dateOfBirth.toUtc().toIso8601String(),
+        'createdAt': createdAt.toUtc().toIso8601String(),
       };
 
   factory Baby.fromJson(Map<String, dynamic> json) => Baby(
         id: json['id'] as String,
         name: json['name'] as String,
         photoPath: (json['photoPath'] ?? json['photo_path']) as String?,
-        dateOfBirth: DateTime.parse((json['dateOfBirth'] ?? json['date_of_birth']) as String),
-        createdAt: DateTime.parse((json['createdAt'] ?? json['created_at']) as String),
+        dateOfBirth: DateTime.parse((json['dateOfBirth'] ?? json['date_of_birth']) as String).toLocal(),
+        createdAt: DateTime.parse((json['createdAt'] ?? json['created_at']) as String).toLocal(),
       );
 
   Baby copyWith({

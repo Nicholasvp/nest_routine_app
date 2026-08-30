@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_utils.dart';
 import '../event_success_toast.dart';
+import '../scroll_wheel_time_picker.dart';
 
 class SleepSheet extends StatefulWidget {
   final BabyEvent? activeTimer;
@@ -32,7 +32,6 @@ class SleepSheet extends StatefulWidget {
 class _SleepSheetState extends State<SleepSheet> {
   late DateTime _manualStart;
   late DateTime _manualEnd;
-  bool _isManualMode = false;
 
   @override
   void initState() {
@@ -40,7 +39,6 @@ class _SleepSheetState extends State<SleepSheet> {
     if (widget.event != null && widget.event!.endTime != null) {
       _manualStart = widget.event!.startTime;
       _manualEnd = widget.event!.endTime!;
-      _isManualMode = true;
     } else {
       _manualStart = DateTime.now().subtract(const Duration(hours: 1));
       _manualEnd = DateTime.now();
@@ -97,57 +95,11 @@ class _SleepSheetState extends State<SleepSheet> {
           ] else if (widget.activeTimer != null) ...[
             _buildTimerDisplay(context),
             const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showManualAdjust,
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    label: Text(strings.adjust),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.cardBorder),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      widget.onStopSleep(DateTime.now());
-                      Navigator.of(context).pop();
-                      EventSuccessToast.show(
-                        context,
-                        icon: Icons.nightlight_round,
-                        color: AppColors.wakeYellow,
-                        title: strings.wakeUp,
-                        subtitle: 'Sleep logged',
-                      );
-                    },
-                    icon: const Icon(Icons.stop_circle_outlined, size: 20),
-                    label: Text(strings.wakeUp,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.wakeYellow,
-                      foregroundColor: AppColors.deepNavy,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _buildManualInput(context),
           ] else ...[
             _buildQuickTimes(context),
             const SizedBox(height: 16),
-            if (_isManualMode) _buildManualInput(context),
+            _buildManualInput(context),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () {
@@ -174,20 +126,6 @@ class _SleepSheetState extends State<SleepSheet> {
               ),
             ),
           ],
-
-          if (!_isManualMode && widget.activeTimer == null && widget.event == null) ...[
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => setState(() => _isManualMode = !_isManualMode),
-              child: Text(
-                strings.manualTimeEntry,
-                style: TextStyle(
-                  color: AppColors.textSecondary.withValues(alpha: 0.7),
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -195,7 +133,9 @@ class _SleepSheetState extends State<SleepSheet> {
 
   Widget _buildTimerDisplay(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
-    final duration = DateTime.now().difference(widget.activeTimer!.startTime);
+    final duration = Duration(
+      microseconds: DateTime.now().difference(widget.activeTimer!.startTime).inMicroseconds.clamp(0, 1 << 62),
+    );
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -242,10 +182,9 @@ class _SleepSheetState extends State<SleepSheet> {
                 label: Text('${minutes}min'),
                 selected: isSelected,
                 onSelected: (_) {
-                  final endTime = DateTime.now()
+                  final startTime = DateTime.now()
                       .subtract(Duration(minutes: minutes));
-                  final startTime = endTime
-                      .subtract(Duration(minutes: minutes));
+                  final endTime = DateTime.now();
                   if (widget.onQuickLog != null) {
                     widget.onQuickLog!(startTime, endTime);
                   } else {
@@ -284,10 +223,11 @@ class _SleepSheetState extends State<SleepSheet> {
           Row(
             children: [
               Expanded(
-                child: _TimePicker(
+                child: ScrollWheelTimePicker(
                   label: strings.fellAsleep,
                   time: _manualStart,
                   onChanged: (t) => setState(() => _manualStart = t),
+                  accentColor: AppColors.sleepPurple,
                 ),
               ),
               const Padding(
@@ -296,167 +236,92 @@ class _SleepSheetState extends State<SleepSheet> {
                     color: AppColors.textTertiary, size: 18),
               ),
               Expanded(
-                child: _TimePicker(
+                child: ScrollWheelTimePicker(
                   label: strings.wokeUp,
                   time: _manualEnd,
                   onChanged: (t) => setState(() => _manualEnd = t),
+                  accentColor: AppColors.sleepPurple,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () {
-                if (widget.event != null && widget.onUpdateSleep != null) {
-                  widget.onUpdateSleep!(widget.event!.copyWith(
-                    startTime: _manualStart,
-                    endTime: _manualEnd,
-                  ));
-                  Navigator.of(context).pop();
-                  EventSuccessToast.show(
-                    context,
-                    icon: Icons.nightlight_round,
-                    color: AppColors.sleepPurple,
-                    title: strings.adjustSleepTime,
-                    subtitle: 'Sleep updated',
-                  );
-                } else {
-                  widget.onStartSleep(_manualStart);
+          if (widget.activeTimer != null) ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () {
                   widget.onStopSleep(_manualEnd);
                   Navigator.of(context).pop();
                   EventSuccessToast.show(
                     context,
                     icon: Icons.nightlight_round,
-                    color: AppColors.sleepPurple,
-                    title: strings.logSleep,
+                    color: AppColors.wakeYellow,
+                    title: strings.wakeUp,
                     subtitle: 'Sleep logged',
                   );
-                }
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.sleepPurple,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                },
+                icon: const Icon(Icons.stop_circle_outlined, size: 20),
+                label: Text(strings.wakeUp,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.wakeYellow,
+                  foregroundColor: AppColors.deepNavy,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
-              child: Text(strings.save,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showManualAdjust() {
-    final tr = context.read<LocaleProvider>().strings;
-    final endTime = DateTime.now();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(tr.adjustSleepTime),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _TimePicker(
-              label: tr.fellAsleep,
-              time: widget.activeTimer!.startTime,
-              onChanged: (_) {},
-            ),
-            const SizedBox(height: 12),
-            _TimePicker(
-              label: tr.wokeUp,
-              time: endTime,
-              onChanged: (_) {},
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(tr.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              widget.onStopSleep(endTime);
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            child: Text(tr.confirm),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimePicker extends StatelessWidget {
-  final String label;
-  final DateTime time;
-  final ValueChanged<DateTime> onChanged;
-
-  const _TimePicker({
-    required this.label,
-    required this.time,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(time),
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.sleepPurple,
-                surface: AppColors.darkPurple,
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () {
+                  if (widget.event != null && widget.onUpdateSleep != null) {
+                    widget.onUpdateSleep!(widget.event!.copyWith(
+                      startTime: _manualStart,
+                      endTime: _manualEnd,
+                    ));
+                    Navigator.of(context).pop();
+                    EventSuccessToast.show(
+                      context,
+                      icon: Icons.nightlight_round,
+                      color: AppColors.sleepPurple,
+                      title: strings.adjustSleepTime,
+                      subtitle: 'Sleep updated',
+                    );
+                  } else {
+                    widget.onStartSleep(_manualStart);
+                    widget.onStopSleep(_manualEnd);
+                    Navigator.of(context).pop();
+                    EventSuccessToast.show(
+                      context,
+                      icon: Icons.nightlight_round,
+                      color: AppColors.sleepPurple,
+                      title: strings.logSleep,
+                      subtitle: 'Sleep logged',
+                    );
+                  }
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.sleepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(strings.save,
+                     style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
-            child: child!,
-          ),
-        );
-        if (picked != null) {
-          final dt = DateTime(
-            time.year,
-            time.month,
-            time.day,
-            picked.hour,
-            picked.minute,
-          );
-          onChanged(dt);
-        }
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12)),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.darkPurple,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.cardBorder),
-            ),
-            child: Text(
-              DateFormat('HH:mm').format(time),
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
+
+

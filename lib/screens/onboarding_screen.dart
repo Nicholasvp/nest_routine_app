@@ -41,6 +41,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   _buildIntroPage(context, strings),
                   _buildFeaturesPage(context, strings),
+                  _buildTutorialPage(context, strings),
                   _buildSetupPage(context, strings),
                 ],
               ),
@@ -135,6 +136,55 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: AppColors.diaperTeal,
             title: strings.notificationsRightTime,
             description: strings.notificationsRightTimeDesc,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTutorialPage(BuildContext context, Strings strings) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            strings.tutorialTitle,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            strings.tutorialSubtitle,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 32),
+          _TutorialItem(
+            icon: Icons.nightlight_round,
+            color: AppColors.sleepPurple,
+            title: strings.tutorialSleepTitle,
+            description: strings.tutorialSleepDesc,
+          ),
+          const SizedBox(height: 24),
+          _TutorialItem(
+            icon: Icons.restaurant_outlined,
+            color: AppColors.feedOrange,
+            title: strings.tutorialFeedTitle,
+            description: strings.tutorialFeedDesc,
+          ),
+          const SizedBox(height: 24),
+          _TutorialItem(
+            icon: Icons.water_drop_outlined,
+            color: AppColors.diaperTeal,
+            title: strings.tutorialDiaperTitle,
+            description: strings.tutorialDiaperDesc,
           ),
         ],
       ),
@@ -247,7 +297,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(3, (index) {
+            children: List.generate(4, (index) {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -266,7 +316,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _currentPage < 2
+              onPressed: _currentPage < 3
                   ? () => _pageController.nextPage(
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
@@ -282,13 +332,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 elevation: 4,
               ),
               child: Text(
-                _currentPage < 2 ? strings.next : strings.getStarted,
+                _currentPage < 3 ? strings.next : strings.getStarted,
                 style: const TextStyle(
                     fontSize: 17, fontWeight: FontWeight.w600),
               ),
             ),
           ),
-          if (_currentPage < 2)
+          if (_currentPage < 3)
             TextButton(
               onPressed: _completeOnboarding,
               child: Text(
@@ -352,35 +402,97 @@ class _LanguageSelector extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(strings.language),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(strings.english),
-              leading: Radio<bool>(
-                value: false,
-                groupValue: localeProvider.isPortuguese,
-                onChanged: (_) {
-                  localeProvider.setLocale('en');
-                  Navigator.pop(ctx);
-                },
-                activeColor: AppColors.sleepPurple,
+        content: RadioGroup<bool>(
+          groupValue: localeProvider.isPortuguese,
+          onChanged: (bool? isPortuguese) {
+            localeProvider.setLocale(isPortuguese == true ? 'pt' : 'en');
+            Navigator.pop(ctx);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(strings.english),
+                leading: const Radio<bool>(
+                  value: false,
+                  activeColor: AppColors.sleepPurple,
+                ),
               ),
-            ),
-            ListTile(
-              title: Text(strings.portuguese),
-              leading: Radio<bool>(
-                value: true,
-                groupValue: localeProvider.isPortuguese,
-                onChanged: (_) {
-                  localeProvider.setLocale('pt');
-                  Navigator.pop(ctx);
-                },
-                activeColor: AppColors.sleepPurple,
+              ListTile(
+                title: Text(strings.portuguese),
+                leading: const Radio<bool>(
+                  value: true,
+                  activeColor: AppColors.sleepPurple,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _TutorialItem extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String description;
+
+  const _TutorialItem({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.5,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

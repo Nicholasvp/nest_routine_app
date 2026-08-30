@@ -368,7 +368,7 @@ class _SettingsToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: AppColors.sleepPurple,
+            activeThumbColor: AppColors.sleepPurple,
           ),
         ],
       ),

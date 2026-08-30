@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -578,8 +577,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await PurchaseService.restorePurchases();
       final isPro = await PurchaseService.checkProStatus();
-      context.read<SubscriptionProvider>().refresh();
       if (!context.mounted) return;
+      context.read<SubscriptionProvider>().refresh();
       if (isPro) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(strings.purchasesRestored)),
@@ -656,34 +655,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(strings.language),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text(strings.english),
-              leading:               Radio<bool>(
-                value: false,
-                groupValue: localeProvider.isPortuguese,
-                onChanged: (_) {
-                  localeProvider.setLocale('en');
-                  Navigator.pop(ctx);
-                },
-                activeColor: AppColors.sleepPurple,
+        content: RadioGroup<bool>(
+          groupValue: localeProvider.isPortuguese,
+          onChanged: (bool? isPortuguese) {
+            localeProvider.setLocale(isPortuguese == true ? 'pt' : 'en');
+            Navigator.pop(ctx);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(strings.english),
+                leading: const Radio<bool>(
+                  value: false,
+                  activeColor: AppColors.sleepPurple,
+                ),
               ),
-            ),
-            ListTile(
-              title: Text(strings.portuguese),
-              leading:               Radio<bool>(
-                value: true,
-                groupValue: localeProvider.isPortuguese,
-                onChanged: (_) {
-                  localeProvider.setLocale('pt');
-                  Navigator.pop(ctx);
-                },
-                activeColor: AppColors.sleepPurple,
+              ListTile(
+                title: Text(strings.portuguese),
+                leading: const Radio<bool>(
+                  value: true,
+                  activeColor: AppColors.sleepPurple,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

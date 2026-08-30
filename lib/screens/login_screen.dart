@@ -80,25 +80,12 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.sleepPurple.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.sleepPurple.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'N',
-                        style: TextStyle(
-                          color: AppColors.sleepPurple,
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                  ClipOval(
+                    child: Image.asset(
+                      'assets/nest_routine_logo.png',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
                     ),
                   ),
                   const SizedBox(height: 24),

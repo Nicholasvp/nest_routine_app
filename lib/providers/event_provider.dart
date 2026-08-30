@@ -236,6 +236,7 @@ class EventProvider extends ChangeNotifier {
       babyId: babyId,
       type: EventType.sleep,
       startTime: DateTime.now(),
+      fellAsleep: true,
     );
     _eventsByBaby[babyId] ??= [];
     _eventsByBaby[babyId]!.insert(0, event);
@@ -249,6 +250,7 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(babyId);
+    _notificationProvider?.startWakeCheckLoop();
     return event;
   }
 
@@ -273,6 +275,7 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(babyId);
+    _notificationProvider?.cancelWakeCheckLoop();
   }
 
   Future<BabyEvent> startFeedTimer(String babyId) async {
@@ -409,8 +412,8 @@ class EventProvider extends ChangeNotifier {
       }
     }
     if (_activeSleepTimer != null) {
-      totalMinutes +=
-          DateTime.now().difference(_activeSleepTimer!.startTime).inMinutes;
+      final activeMinutes = DateTime.now().difference(_activeSleepTimer!.startTime).inMinutes;
+      totalMinutes += activeMinutes.clamp(0, 1440);
     }
     final hours = totalMinutes / 60;
     return hours.clamp(0.0, 24.0);

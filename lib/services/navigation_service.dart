@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class NavigationService {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   static final ValueNotifier<int> tabIndex = ValueNotifier<int>(0);
 
   static void goToTab(int index) {

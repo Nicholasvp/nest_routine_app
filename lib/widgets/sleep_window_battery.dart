@@ -83,7 +83,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: state == BatteryState.critical
-                  ? AppColors.error.withOpacity(blinkOpacity * 0.5)
+                  ? AppColors.error.withValues(alpha: blinkOpacity * 0.5)
                   : borderCol,
             ),
           ),
@@ -95,7 +95,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
                   Icon(
                     Icons.battery_charging_full_outlined,
                     size: 18,
-                    color: barColor.withOpacity(blinkOpacity),
+                    color: barColor.withValues(alpha: blinkOpacity),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -122,7 +122,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
               Text(
                 _statusText(calc, strings),
                 style: TextStyle(
-                  color: barColor.withOpacity(blinkOpacity),
+                  color: barColor.withValues(alpha: blinkOpacity),
                   fontSize: 14,
                   fontWeight: state == BatteryState.critical
                       ? FontWeight.w700
@@ -174,7 +174,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
                 ),
                 decoration: BoxDecoration(
                   color: isFilled
-                      ? color.withOpacity(opacity)
+                      ? color.withValues(alpha: opacity)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(3),
                 ),
@@ -195,7 +195,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.sleepPurple.withOpacity(0.2),
+          color: AppColors.sleepPurple.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -204,7 +204,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.sleepPurple.withOpacity(0.15),
+              color: AppColors.sleepPurple.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.nightlight_round,
@@ -245,7 +245,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppColors.cardBorder.withOpacity(0.2),
+          color: AppColors.cardBorder.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -254,7 +254,7 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.textTertiary.withOpacity(0.15),
+              color: AppColors.textTertiary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.battery_unknown_outlined,

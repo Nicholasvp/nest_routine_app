@@ -24,6 +24,7 @@ import '../services/review_service.dart';
 import '../services/purchase_service.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/notification_provider.dart';
+import '../widgets/notification_settings_modal.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -51,6 +52,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _glowAnimation = Tween<double>(begin: 0.0, end: 12.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+  }
+
+  Future<void> _onRefresh(
+      BabyProvider babyProvider, EventProvider eventProvider) async {
+    final baby = babyProvider.currentBaby;
+    if (baby != null) {
+      eventProvider.loadEvents(baby.id);
+      await eventProvider.loadEventsFromCloud(baby.id);
+    }
+    await babyProvider.loadBabiesFromCloud();
   }
 
   void _checkReviewPrompt(EventProvider eventProvider) {
@@ -120,9 +131,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final isPro = context.watch<SubscriptionProvider>().isPro;
     final notificationsEnabled = context.watch<NotificationProvider>().permissionGranted;
+    final settings = context.watch<NotificationProvider>().settings;
+    final hasAnySmartNotification = settings.sleepEnabled || settings.diaperPeeEnabled || settings.diaperPoopEnabled;
+    debugPrint('[HomeScreen] isPro=$isPro, notificationsEnabled=$notificationsEnabled, sleep=${settings.sleepEnabled}, diaperPee=${settings.diaperPeeEnabled}, diaperPoop=${settings.diaperPoopEnabled}, hasAnySmart=$hasAnySmartNotification, shouldShow=${!isPro || !notificationsEnabled || !hasAnySmartNotification}');
     final todayEvents = eventProvider.getTodayEvents(baby.id);
     final activeSleep = eventProvider.activeSleepTimer;
-    final activeFeed = eventProvider.activeFeedTimer;
     final nextNap = eventProvider.predictNextNap(baby.id);
     final nextFeed = eventProvider.predictNextFeed(baby.id);
     final nextDiaper = eventProvider.predictNextDiaper(baby.id);
@@ -135,40 +148,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             _buildHeader(context, babyProvider, baby.name),
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    _buildTimelineSection(
-                        context, eventProvider, todayEvents, activeSleep),
-                    const SizedBox(height: 24),
-                    _buildPredictionCards(
-                        context, nextNap, nextFeed, nextDiaper, totalSleep,
-                        onNapTap: () => _showSleepSheet(
-                            context, eventProvider, activeSleep),
-                        onFeedTap: () => _showFeedSheet(
-                            context, eventProvider, baby.id),
-                        onDiaperTap: () => _showDiaperSheet(
-                            context, eventProvider, baby.id, defaultPee: true),
-                      ),
-                    const SizedBox(height: 12),
-                    if (!isPro || !notificationsEnabled) ...[
-                      _buildNotificationCtaBanner(context),
+              child: RefreshIndicator(
+                onRefresh: () => _onRefresh(babyProvider, eventProvider),
+                color: AppColors.softLavender,
+                backgroundColor: AppColors.cardDark,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildTimelineSection(
+                          context, eventProvider, todayEvents, activeSleep),
+                      const SizedBox(height: 24),
+                      _buildPredictionCards(
+                          context, nextNap, nextFeed, nextDiaper, totalSleep,
+                          onNapTap: () => _showSleepSheet(
+                              context, eventProvider, activeSleep),
+                          onFeedTap: () => _showFeedSheet(
+                              context, eventProvider, baby.id),
+                          onDiaperTap: () => _showDiaperSheet(
+                              context, eventProvider, baby.id, defaultPee: true),
+                        ),
                       const SizedBox(height: 12),
+                      if (!isPro || !notificationsEnabled || !hasAnySmartNotification) ...[
+                        _buildNotificationCtaBanner(context),
+                        const SizedBox(height: 12),
+                      ],
+                      _SleepWindowBatteryWidget(
+                        ageMonths: baby.ageInMonths,
+                        lastWakeUp: lastWakeUp,
+                        isSleeping: activeSleep != null,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildQuickActionSection(context, eventProvider, baby.id),
+                      const SizedBox(height: 16),
+                      _buildRecentEvents(context, eventProvider, baby.id, todayEvents),
+                      const SizedBox(height: 24),
+                      _buildBugReportLink(context),
+                      const SizedBox(height: 80),
                     ],
-                    _SleepWindowBatteryWidget(
-                      ageMonths: baby.ageInMonths,
-                      lastWakeUp: lastWakeUp,
-                      isSleeping: activeSleep != null,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildQuickActionSection(context, eventProvider, baby.id),
-                    const SizedBox(height: 16),
-                    _buildRecentEvents(context, eventProvider, baby.id, todayEvents),
-                    const SizedBox(height: 24),
-                    _buildBugReportLink(context),
-                    const SizedBox(height: 80),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -339,7 +359,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         onPee: () =>
             _showDiaperSheet(context, eventProvider, babyId, defaultPee: true),
         onPoop: () =>
-            _showDiaperSheet(context, eventProvider, babyId, defaultPee: false),
+            _showDiaperSheet(context, eventProvider, babyId, defaultPee: false, defaultPoop: true),
       ),
     );
   }
@@ -430,6 +450,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               babyId: babyId,
               type: EventType.sleep,
               startTime: startTime,
+              fellAsleep: true,
             );
             eventProvider.addEvent(event);
           }
@@ -497,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showDiaperSheet(BuildContext context, EventProvider eventProvider,
-      String babyId, {required bool defaultPee}) {
+      String babyId, {required bool defaultPee, bool defaultPoop = false}) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
@@ -505,6 +526,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       builder: (_) => DiaperSheet(
         defaultPee: defaultPee,
+        defaultPoop: defaultPoop,
         onLogDiaper: (event) {
           final completeEvent = event.copyWith(
             id: const Uuid().v4(),
@@ -610,12 +632,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildNotificationCtaBanner(BuildContext context) {
     final tr = context.watch<LocaleProvider>().strings;
     final isPro = context.watch<SubscriptionProvider>().isPro;
+    final notificationsEnabled = context.watch<NotificationProvider>().permissionGranted;
     return GestureDetector(
       onTap: () {
         if (!isPro) {
           _openPaywall(context);
-        } else {
+        } else if (!notificationsEnabled) {
           context.read<NotificationProvider>().requestPermission();
+        } else {
+          NotificationSettingsModal.show(context);
         }
       },
       child: Container(

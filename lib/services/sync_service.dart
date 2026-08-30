@@ -28,8 +28,8 @@ class SyncService {
         'user_id': _userId,
         'name': baby.name,
         'photo_path': baby.photoPath,
-        'date_of_birth': baby.dateOfBirth.toIso8601String(),
-        'created_at': baby.createdAt.toIso8601String(),
+        'date_of_birth': baby.dateOfBirth.toUtc().toIso8601String(),
+        'created_at': baby.createdAt.toUtc().toIso8601String(),
       });
     } catch (e) {
       debugPrint('[SyncService] Failed to sync baby: $e');
@@ -82,8 +82,8 @@ class SyncService {
         'baby_id': event.babyId,
         'user_id': _userId,
         'type': event.type.name,
-        'start_time': event.startTime.toIso8601String(),
-        'end_time': event.endTime?.toIso8601String(),
+        'start_time': event.startTime.toUtc().toIso8601String(),
+        'end_time': event.endTime?.toUtc().toIso8601String(),
         'notes': event.notes,
         'feed_type': event.feedType?.name,
         'feed_side': event.feedSide?.name,

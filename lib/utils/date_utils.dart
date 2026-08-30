@@ -34,10 +34,11 @@ class AppDateUtils {
   }
 
   static String formatDuration(Duration d) {
-    if (d.inHours > 0) {
-      return '${d.inHours}h ${d.inMinutes.remainder(60)}min';
+    final safe = d.isNegative ? Duration.zero : d;
+    if (safe.inHours > 0) {
+      return '${safe.inHours}h ${safe.inMinutes.remainder(60)}min';
     }
-    return '${d.inMinutes}min';
+    return '${safe.inMinutes}min';
   }
 
   static String formatTimeAgo(DateTime dt, {bool isPt = false}) {

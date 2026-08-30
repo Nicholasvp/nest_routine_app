@@ -74,6 +74,37 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> startWakeCheckLoop() async {
+    await _scheduleNextWakeCheck();
+  }
+
+  Future<void> _scheduleNextWakeCheck() async {
+    final scheduledTime = DateTime.now().add(const Duration(minutes: 15));
+    final title = _isPortuguese
+        ? 'O bebê acordou? 🤔'
+        : 'Did the baby wake up? 🤔';
+    final body = _isPortuguese
+        ? 'Toque para verificar'
+        : 'Tap to check';
+
+    await NotificationService.scheduleWakeCheck(
+      scheduledTime: scheduledTime,
+      title: title,
+      body: body,
+    );
+  }
+
+  Future<void> onWakeCheckResponse({required bool wokeUp}) async {
+    await NotificationService.cancelWakeCheck();
+    if (!wokeUp) {
+      await _scheduleNextWakeCheck();
+    }
+  }
+
+  Future<void> cancelWakeCheckLoop() async {
+    await NotificationService.cancelWakeCheck();
+  }
+
   Future<void> updateFeedEnabled(bool enabled) async {
     _settings.feedEnabled = enabled;
     await saveSettings();
@@ -158,22 +189,57 @@ class NotificationProvider extends ChangeNotifier {
     final prediction = PredictionEngine.predictNextSleep(events);
     if (prediction.predictedTime == null) return;
 
-    final scheduledTime = prediction.predictedTime!.subtract(
-      Duration(minutes: _settings.sleepAdvanceMinutes),
-    );
+    final predictedTime = prediction.predictedTime!;
+    final now = DateTime.now();
 
-    if (scheduledTime.isBefore(DateTime.now())) return;
+    final advanceMinutesList = [15, 10, 5];
 
-    final title = isPortuguese ? 'Hora da soneca! 😴' : 'Nap time! 😴';
-    final body = isPortuguese
-        ? 'O bebê pode precisar dormir em ${_settings.sleepAdvanceMinutes} minutos'
-        : 'Baby may need to sleep in ${_settings.sleepAdvanceMinutes} minutes';
+    if (predictedTime.isAfter(now)) {
+      for (final minutes in advanceMinutesList) {
+        final scheduledTime = predictedTime.subtract(Duration(minutes: minutes));
+        if (scheduledTime.isBefore(now)) continue;
 
-    await NotificationService.scheduleSleepNotification(
-      scheduledTime: scheduledTime,
-      title: title,
-      body: body,
-    );
+        final title = isPortuguese ? 'Hora da soneca! 😴' : 'Nap time! 😴';
+        final body = isPortuguese
+            ? 'O bebê pode precisar dormir em $minutes minutos'
+            : 'Baby may need to sleep in $minutes minutes';
+
+        switch (minutes) {
+          case 15:
+            await NotificationService.scheduleSleepAdvance15(
+              scheduledTime: scheduledTime,
+              title: title,
+              body: body,
+            );
+            break;
+          case 10:
+            await NotificationService.scheduleSleepAdvance10(
+              scheduledTime: scheduledTime,
+              title: title,
+              body: body,
+            );
+            break;
+          case 5:
+            await NotificationService.scheduleSleepAdvance5(
+              scheduledTime: scheduledTime,
+              title: title,
+              body: body,
+            );
+            break;
+        }
+      }
+    } else {
+      final title = isPortuguese ? 'Hora da soneca! 😴' : 'Nap time! 😴';
+      final body = isPortuguese
+          ? 'Está na hora do bebê dormir!'
+          : 'It\'s time for baby to sleep!';
+
+      await NotificationService.scheduleSleepNotification(
+        scheduledTime: now.add(const Duration(seconds: 10)),
+        title: title,
+        body: body,
+      );
+    }
   }
 
   Future<void> _rescheduleFeedNotification(

@@ -38,7 +38,7 @@ class SleepBatteryCalculator {
 
   int get elapsedMinutesSinceWake {
     if (lastWakeUp == null) return 0;
-    return DateTime.now().difference(lastWakeUp!).inMinutes;
+    return DateTime.now().difference(lastWakeUp!).inMinutes.clamp(0, 99999);
   }
 
   double get batteryPercent {

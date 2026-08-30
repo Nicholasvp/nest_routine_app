@@ -47,6 +47,28 @@ class Strings {
   String get getStarted => get('Get Started', 'Começar');
   String get skipSetup => get('Skip setup', 'Pular configuração');
 
+  // ── Onboarding Tutorial ──
+  String get tutorialTitle => get('How it works', 'Como funciona');
+  String get tutorialSubtitle => get(
+    'Here\'s how to log your baby\'s routine in seconds.',
+    'Veja como registrar a rotina do seu bebê em segundos.',
+  );
+  String get tutorialSleepTitle => get('Sleep', 'Dormir');
+  String get tutorialSleepDesc => get(
+    'Tap the moon icon to start a sleep timer in real time, or pick a quick duration. The app predicts the next nap automatically.',
+    'Toque no ícone da lua para iniciar um timer de sono em tempo real, ou escolha uma duração rápida. O app prevê a próxima soneca automaticamente.',
+  );
+  String get tutorialFeedTitle => get('Feed', 'Mamar');
+  String get tutorialFeedDesc => get(
+    'Choose breast or bottle. For breast, select the side. The timer tracks duration and volume — all in one tap.',
+    'Escolha peito ou mamadeira. Para peito, selecione o lado. O timer registra duração e volume — tudo com um toque.',
+  );
+  String get tutorialDiaperTitle => get('Diaper', 'Fralda');
+  String get tutorialDiaperDesc => get(
+    'Select pee, poop, or both. The log is instant — no long forms. Add texture details if you want.',
+    'Selecione xixi, cocô ou ambos. O registro é instantâneo — sem formulários longos. Adicione detalhes de textura se quiser.',
+  );
+
   // ── Home ──
   String get addBabyToStart => get('Add a baby profile to start', 'Adicione um perfil de bebê para começar');
   String get tapToStopSleepTimer => get('Tap to stop sleep timer', 'Toque para parar o timer de sono');
@@ -117,6 +139,7 @@ class Strings {
   String get nursingNow => get('Nursing now', 'Mamando agora');
   String get stopNursing => get('Stop nursing', 'Parar de mamar');
   String get babyStartedNursing => get('Baby started nursing', 'Bebê começou a mamar');
+  String get startTimer => get('Start Timer', 'Iniciar Timer');
   String get breastfeedingSideDistribution => get('Breastfeeding Side Distribution', 'Distribuição Lateral da Mamada');
 
   // ── Diaper Sheet ──
@@ -184,6 +207,11 @@ class Strings {
   String get poopReminder => get('Poop check', 'Verificar coco');
   String get poopReminderDesc => get('Remind to check for poop', 'Lembrar para verificar coco');
   String get diaperInterval => get('Check interval', 'Intervalo de verificação');
+  String get wakeCheckTitle => get('Did the baby wake up?', 'O bebê acordou?');
+  String get wakeCheckBody => get('Tap to check', 'Toque para verificar');
+  String get wakeCheckModalTitle => get('Did the baby wake up?', 'O bebê acordou?');
+  String get wakeCheckYes => get('Yes, woke up', 'Sim, acordou');
+  String get wakeCheckNo => get('No, still sleeping', 'Não, ainda dormindo');
   String minutesBefore(int m) => get('$m min before', '$m min antes');
   String everyHours(int h) => get('Every $h hours', 'A cada $h horas');
   String get notificationsEnabled => get('Notifications enabled', 'Notificações ativadas');
@@ -337,4 +365,15 @@ class Strings {
 
   // ── Review ──
   String get rateApp => get('Rate NestRoutine', 'Avaliar NestRoutine');
+
+  // ── Update ──
+  String get updateAvailable => get('Update Available', 'Atualização Disponível');
+  String updateDesc(String v) => get(
+    'A new version ($v) of NestRoutine is available.',
+    'Uma nova versão ($v) do NestRoutine está disponível.',
+  );
+  String get updateRequired => get('This update is required to continue.', 'Esta atualização é obrigatória para continuar.');
+  String get whatsNew => get("What's New", 'Novidades');
+  String get updateNow => get('Update Now', 'Atualizar Agora');
+  String get updateLater => get('Not Now', 'Agora Não');
 }

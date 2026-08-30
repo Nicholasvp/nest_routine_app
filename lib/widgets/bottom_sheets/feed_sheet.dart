@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
@@ -7,6 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/strings.dart';
 import '../event_success_toast.dart';
+import '../scroll_wheel_time_picker.dart';
 
 class FeedSheet extends StatefulWidget {
   final BabyEvent? activeTimer;
@@ -35,12 +35,9 @@ class FeedSheet extends StatefulWidget {
 class _FeedSheetState extends State<FeedSheet> {
   late FeedType _feedType;
   late FeedSide _feedSide;
-  late int _durationMinutes;
   late int _volumeMl;
   late DateTime _feedStartTime;
   late DateTime _feedEndTime;
-  bool _isManualTime = false;
-  bool _isManualMode = false;
 
   @override
   void initState() {
@@ -48,15 +45,12 @@ class _FeedSheetState extends State<FeedSheet> {
     if (widget.event != null) {
       _feedType = widget.event!.feedType ?? FeedType.breast;
       _feedSide = widget.event!.feedSide ?? FeedSide.left;
-      _durationMinutes = widget.event!.durationMinutes ?? 15;
       _volumeMl = widget.event!.volumeMl ?? 60;
       _feedStartTime = widget.event!.startTime;
       _feedEndTime = widget.event!.endTime ?? DateTime.now();
-      _isManualTime = true;
     } else {
       _feedType = FeedType.breast;
       _feedSide = widget.activeTimer?.feedSide ?? FeedSide.left;
-      _durationMinutes = 15;
       _volumeMl = 60;
       _feedStartTime = DateTime.now().subtract(const Duration(minutes: 15));
       _feedEndTime = DateTime.now();
@@ -124,52 +118,34 @@ class _FeedSheetState extends State<FeedSheet> {
             const SizedBox(height: 20),
             _buildSideSelector(context),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showAdjustDialog,
-                    icon: const Icon(Icons.edit_outlined, size: 18),
-                    label: Text(strings.adjust),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.cardBorder),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
+            _buildTimePickersInline(context, strings),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  widget.onStopNursing(_feedEndTime, _feedSide, startTime: _feedStartTime);
+                  Navigator.of(context).pop();
+                  EventSuccessToast.show(
+                    context,
+                    icon: Icons.local_dining_outlined,
+                    color: AppColors.feedOrange,
+                    title: strings.stopNursing,
+                    subtitle: 'Feed logged',
+                  );
+                },
+                icon: const Icon(Icons.stop_circle_outlined, size: 18),
+                label: Text(strings.stopNursing,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.feedOrange,
+                  side: BorderSide(color: AppColors.feedOrange.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 2,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      widget.onStopNursing(DateTime.now(), _feedSide);
-                      Navigator.of(context).pop();
-                      EventSuccessToast.show(
-                        context,
-                        icon: Icons.local_dining_outlined,
-                        color: AppColors.feedOrange,
-                        title: strings.stopNursing,
-                        subtitle: 'Feed logged',
-                      );
-                    },
-                    icon: const Icon(Icons.stop_circle_outlined, size: 18),
-                    label: Text(strings.stopNursing,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.feedOrange,
-                      side: BorderSide(color: AppColors.feedOrange.withValues(alpha: 0.4)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ] else if (widget.event != null) ...[
             _buildEditMode(context, strings),
@@ -210,48 +186,47 @@ class _FeedSheetState extends State<FeedSheet> {
     );
   }
 
-  void _showAdjustDialog() {
-    final tr = context.read<LocaleProvider>().strings;
-    DateTime adjustStart = widget.activeTimer!.startTime;
-    DateTime adjustEnd = DateTime.now();
-    final startLabel = tr.startTime;
-    final endLabel = tr.endTime;
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(tr.adjust),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+  Widget _buildTimePickersInline(BuildContext context, Strings strings) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              _TimePicker(
-                label: startLabel,
-                time: adjustStart,
-                onChanged: (t) => setDialogState(() => adjustStart = t),
+              Expanded(
+                child: ScrollWheelTimePicker(
+                  label: strings.startTime,
+                  time: _feedStartTime,
+                  onChanged: (t) => setState(() => _feedStartTime = t),
+                  accentColor: AppColors.feedOrange,
+                ),
               ),
-              const SizedBox(height: 12),
-              _TimePicker(
-                label: endLabel,
-                time: adjustEnd,
-                onChanged: (t) => setDialogState(() => adjustEnd = t),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.arrow_forward,
+                    color: AppColors.textTertiary, size: 18),
+              ),
+              Expanded(
+                child: ScrollWheelTimePicker(
+                  label: strings.endTime,
+                  time: _feedEndTime,
+                  onChanged: (t) => setState(() => _feedEndTime = t),
+                  accentColor: AppColors.feedOrange,
+                ),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(tr.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                widget.onStopNursing(adjustEnd, _feedSide, startTime: adjustStart);
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: Text(tr.confirm),
-            ),
-          ],
-        ),
+          const SizedBox(height: 12),
+          Text(
+            '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
+            style: const TextStyle(
+                color: AppColors.textSecondary, fontSize: 13),
+          ),
+        ],
       ),
     );
   }
@@ -309,10 +284,11 @@ class _FeedSheetState extends State<FeedSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: _TimePicker(
+                    child: ScrollWheelTimePicker(
                       label: strings.startTime,
                       time: _feedStartTime,
                       onChanged: (t) => setState(() => _feedStartTime = t),
+                      accentColor: AppColors.feedOrange,
                     ),
                   ),
                   const Padding(
@@ -321,10 +297,11 @@ class _FeedSheetState extends State<FeedSheet> {
                         color: AppColors.textTertiary, size: 18),
                   ),
                   Expanded(
-                    child: _TimePicker(
+                    child: ScrollWheelTimePicker(
                       label: strings.endTime,
                       time: _feedEndTime,
                       onChanged: (t) => setState(() => _feedEndTime = t),
+                      accentColor: AppColors.feedOrange,
                     ),
                   ),
                 ],
@@ -360,7 +337,7 @@ class _FeedSheetState extends State<FeedSheet> {
           child: FilledButton.icon(
             onPressed: _saveEdit,
             icon: const Icon(Icons.check_circle_outlined, size: 20),
-            label: Text(strings.logFeed,
+            label: Text(strings.save,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.feedOrange,
@@ -379,95 +356,53 @@ class _FeedSheetState extends State<FeedSheet> {
   Widget _buildNewFeedMode(BuildContext context, Strings strings) {
     return Column(
       children: [
-        if (_isManualMode) ...[
-          Container(
-            margin: const EdgeInsets.only(bottom: 20),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.cardDark,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TimePicker(
-                        label: strings.startTime,
-                        time: _feedStartTime,
-                        onChanged: (t) => setState(() => _feedStartTime = t),
-                      ),
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.arrow_forward,
-                          color: AppColors.textTertiary, size: 18),
-                    ),
-                    Expanded(
-                      child: _TimePicker(
-                        label: strings.endTime,
-                        time: _feedEndTime,
-                        onChanged: (t) => setState(() => _feedEndTime = t),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 13),
-                ),
-              ],
-            ),
+        Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(16),
           ),
-        ] else ...[
-          if (_isManualTime)
-            Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.cardDark,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: _TimePicker(
-                label: strings.time,
-                time: _feedStartTime,
-                onChanged: (t) => setState(() => _feedStartTime = t),
-              ),
-            ),
-          if (!_isManualTime)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => setState(() => _isManualTime = true),
-                icon: const Icon(Icons.access_time_outlined, size: 16),
-                label: Text(
-                  strings.manualTimeEntry,
-                  style: TextStyle(
-                    color: AppColors.textSecondary.withValues(alpha: 0.7),
-                    fontSize: 13,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: ScrollWheelTimePicker(
+                      label: strings.startTime,
+                      time: _feedStartTime,
+                      onChanged: (t) => setState(() => _feedStartTime = t),
+                      accentColor: AppColors.feedOrange,
+                    ),
                   ),
-                ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.arrow_forward,
+                        color: AppColors.textTertiary, size: 18),
+                  ),
+                  Expanded(
+                    child: ScrollWheelTimePicker(
+                      label: strings.endTime,
+                      time: _feedEndTime,
+                      onChanged: (t) => setState(() => _feedEndTime = t),
+                      accentColor: AppColors.feedOrange,
+                    ),
+                  ),
+                ],
               ),
-            ),
-        ],
+              const SizedBox(height: 12),
+              Text(
+                '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
         _buildFeedTypeSelector(context),
         const SizedBox(height: 20),
         if (_feedType == FeedType.breast) ...[
           _buildSideSelector(context),
-          if (!_isManualMode) ...[
-            const SizedBox(height: 20),
-            _buildSlider(
-              context,
-              label: strings.duration,
-              value: _durationMinutes.toDouble(),
-              min: 1,
-              max: _durationMinutes > 60 ? _durationMinutes.toDouble() : 60,
-              display: '$_durationMinutes min',
-              onChanged: (v) => setState(() => _durationMinutes = v.round()),
-            ),
-          ],
         ] else ...[
           _buildSlider(
             context,
@@ -491,12 +426,12 @@ class _FeedSheetState extends State<FeedSheet> {
                 context,
                 icon: Icons.local_dining_outlined,
                 color: AppColors.feedOrange,
-                title: strings.babyStartedNursing,
-                subtitle: 'Feed timer started',
+                title: strings.startTimer,
+                subtitle: 'Timer started',
               );
             },
             icon: const Icon(Icons.play_circle_outlined, size: 20),
-            label: Text(strings.babyStartedNursing,
+            label: Text(strings.startTimer,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.feedOrange,
@@ -514,7 +449,7 @@ class _FeedSheetState extends State<FeedSheet> {
           child: FilledButton.icon(
             onPressed: _saveNew,
             icon: const Icon(Icons.check_circle_outlined, size: 20),
-            label: Text(strings.logFeed,
+            label: Text(strings.save,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.cardDark,
@@ -526,19 +461,6 @@ class _FeedSheetState extends State<FeedSheet> {
             ),
           ),
         ),
-        if (!_isManualMode && !_isManualTime) ...[
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () => setState(() => _isManualMode = true),
-            child: Text(
-              strings.manualTimeEntry,
-              style: TextStyle(
-                color: AppColors.textSecondary.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -618,23 +540,16 @@ class _FeedSheetState extends State<FeedSheet> {
   }
 
   void _saveNew() {
+    final duration = _feedEndTime.difference(_feedStartTime).inMinutes;
     final event = BabyEvent(
       id: '',
       babyId: '',
       type: EventType.feed,
       startTime: _feedStartTime,
-      endTime: _isManualMode
-          ? _feedEndTime
-          : (_feedType == FeedType.breast
-              ? _feedStartTime.add(Duration(minutes: _durationMinutes))
-              : _feedStartTime),
+      endTime: _feedEndTime,
       feedType: _feedType,
       feedSide: _feedType == FeedType.breast ? _feedSide : null,
-      durationMinutes: _feedType == FeedType.breast
-          ? (_isManualMode
-              ? _feedEndTime.difference(_feedStartTime).inMinutes
-              : _durationMinutes)
-          : null,
+      durationMinutes: _feedType == FeedType.breast ? duration : null,
       volumeMl: _feedType == FeedType.bottle ? _volumeMl : null,
     );
     widget.onLogFeed(event);
@@ -644,7 +559,7 @@ class _FeedSheetState extends State<FeedSheet> {
       icon: Icons.local_dining_outlined,
       color: AppColors.feedOrange,
       title: 'Feed logged',
-      subtitle: _feedType == FeedType.breast ? '${_durationMinutes}min' : '$_volumeMl ml',
+      subtitle: _feedType == FeedType.breast ? '${duration}min' : '$_volumeMl ml',
     );
   }
 
@@ -671,13 +586,6 @@ class _FeedSheetState extends State<FeedSheet> {
     }
   }
 
-  void _save() {
-    if (widget.event != null && widget.onUpdateFeed != null) {
-      _saveEdit();
-    } else {
-      _saveNew();
-    }
-  }
 }
 
 class _ChoiceChip extends StatelessWidget {
@@ -774,74 +682,6 @@ class _SideButton extends StatelessWidget {
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TimePicker extends StatelessWidget {
-  final String label;
-  final DateTime time;
-  final ValueChanged<DateTime> onChanged;
-
-  const _TimePicker({
-    required this.label,
-    required this.time,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(time),
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.feedOrange,
-                surface: AppColors.darkPurple,
-              ),
-            ),
-            child: child!,
-          ),
-        );
-        if (picked != null) {
-          final dt = DateTime(
-            time.year,
-            time.month,
-            time.day,
-            picked.hour,
-            picked.minute,
-          );
-          onChanged(dt);
-        }
-      },
-      child: Row(
-        children: [
-          const Icon(Icons.access_time_outlined,
-              size: 20, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
-              Text(
-                DateFormat('HH:mm').format(time),
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const Spacer(),
-          const Icon(Icons.chevron_right_rounded,
-              color: AppColors.textTertiary, size: 20),
-        ],
       ),
     );
   }

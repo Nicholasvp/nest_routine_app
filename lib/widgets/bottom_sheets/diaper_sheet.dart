@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../event_success_toast.dart';
+import '../scroll_wheel_time_picker.dart';
 
 class DiaperSheet extends StatefulWidget {
   final BabyEvent? event;
   final bool defaultPee;
+  final bool defaultPoop;
   final void Function(BabyEvent event) onLogDiaper;
   final void Function(BabyEvent event)? onUpdateDiaper;
 
@@ -16,6 +17,7 @@ class DiaperSheet extends StatefulWidget {
     super.key,
     this.event,
     this.defaultPee = true,
+    this.defaultPoop = false,
     required this.onLogDiaper,
     this.onUpdateDiaper,
   });
@@ -42,7 +44,7 @@ class _DiaperSheetState extends State<DiaperSheet> {
       _selectedTime = widget.event!.startTime;
     } else {
       _hasPee = widget.defaultPee;
-      _hasPoop = false;
+      _hasPoop = widget.defaultPoop;
       _texture = null;
       _selectedTime = DateTime.now();
     }
@@ -214,63 +216,11 @@ class _DiaperSheetState extends State<DiaperSheet> {
 
   Widget _buildTimePicker(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
-    return GestureDetector(
-      onTap: () async {
-        final picked = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(_selectedTime),
-          builder: (context, child) => Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.dark(
-                primary: AppColors.diaperTeal,
-                surface: AppColors.darkPurple,
-              ),
-            ),
-            child: child!,
-          ),
-        );
-        if (picked != null) {
-          setState(() {
-            _selectedTime = DateTime(
-              _selectedTime.year,
-              _selectedTime.month,
-              _selectedTime.day,
-              picked.hour,
-              picked.minute,
-            );
-          });
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.access_time, color: AppColors.diaperTeal, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              strings.time,
-              style: TextStyle(
-                color: AppColors.textSecondary.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              DateFormat('HH:mm').format(_selectedTime),
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return ScrollWheelTimePicker(
+      label: strings.time,
+      time: _selectedTime,
+      onChanged: (t) => setState(() => _selectedTime = t),
+      accentColor: AppColors.diaperTeal,
     );
   }
 

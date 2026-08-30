@@ -63,7 +63,7 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await Purchases.purchasePackage(package);
+      final result = await Purchases.purchase(PurchaseParams.package(package));
       final activeEntitlements = result.customerInfo.entitlements.active.keys.toList();
       debugPrint('[SubscriptionProvider] Purchase completed. Active entitlements: $activeEntitlements');
       _isPro = result.customerInfo.entitlements.active[PurchaseService.proEntitlementId] != null;

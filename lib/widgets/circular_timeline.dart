@@ -54,7 +54,9 @@ class CircularTimeline extends StatelessWidget {
   Widget _buildCenterContent(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
     if (activeSleep != null) {
-      final duration = DateTime.now().difference(activeSleep!.startTime);
+      final duration = Duration(
+        microseconds: DateTime.now().difference(activeSleep!.startTime).inMicroseconds.clamp(0, 1 << 62),
+      );
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -143,7 +145,9 @@ class CircularTimeline extends StatelessWidget {
         );
 
     if (lastSleep != null) {
-      final awakeDuration = awakeNow.difference(lastSleep.endTime!);
+      final awakeDuration = Duration(
+        microseconds: awakeNow.difference(lastSleep.endTime!).inMicroseconds.clamp(0, 1 << 62),
+      );
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [

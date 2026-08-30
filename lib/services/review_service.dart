@@ -39,17 +39,15 @@ class ReviewService {
       return totalEvents >= 1;
     }
 
-    if (_declinedCount >= 3) return false;
-
     final lastDate = _lastPromptDate;
     if (lastDate != null) {
       final last = DateTime.parse(lastDate);
       final daysSince = DateTime.now().difference(last).inDays;
-      if (daysSince < 3) return false;
+      if (daysSince < 1) return false;
     }
 
     final eventsSinceLast = totalEvents - _totalEventsAtLastPrompt;
-    if (eventsSinceLast < 5) return false;
+    if (eventsSinceLast < 1) return false;
 
     return true;
   }
@@ -150,7 +148,7 @@ class _ReviewModal extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Enjoying NestRoutine?',
+              'Curtindo o NestRoutine?',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 20,
@@ -159,7 +157,7 @@ class _ReviewModal extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your review helps other parents discover NestRoutine!',
+              'Sua avaliação ajuda outros pais a descobrirem o NestRoutine!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary.withValues(alpha: 0.8),
@@ -174,7 +172,7 @@ class _ReviewModal extends StatelessWidget {
                 onPressed: onAccept,
                 icon: const Icon(Icons.star_rounded, size: 20),
                 label: const Text(
-                  'Rate NestRoutine',
+                  'Avaliar NestRoutine',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(
@@ -190,7 +188,7 @@ class _ReviewModal extends StatelessWidget {
             TextButton(
               onPressed: onDecline,
               child: Text(
-                'Not now',
+                'Agora não',
                 style: TextStyle(
                   color: AppColors.textSecondary.withValues(alpha: 0.7),
                   fontSize: 13,

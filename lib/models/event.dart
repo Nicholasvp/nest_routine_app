@@ -25,6 +25,12 @@ class BabyEvent {
   final bool hasPoop;
   final DiaperTexture? diaperTexture;
 
+  // Sleep-specific (persisted via JSON/cloud, inferred for Hive)
+  final bool fellAsleep;
+
+  /// For sleep events loaded from Hive, infer fellAsleep from ongoing state
+  bool get isFellAsleep => fellAsleep || (type == EventType.sleep && endTime == null);
+
   BabyEvent({
     required this.id,
     required this.babyId,
@@ -39,20 +45,23 @@ class BabyEvent {
     this.hasPee = false,
     this.hasPoop = false,
     this.diaperTexture,
+    this.fellAsleep = false,
   });
 
   Duration? get duration {
     if (endTime == null) return null;
-    return endTime!.difference(startTime);
+    final d = endTime!.difference(startTime);
+    return d.isNegative ? Duration.zero : d;
   }
 
   String get durationLabel {
     final d = duration;
     if (d == null) return '';
-    if (d.inHours > 0) {
-      return '${d.inHours}h ${d.inMinutes.remainder(60)}min';
+    final safe = d.isNegative ? Duration.zero : d;
+    if (safe.inHours > 0) {
+      return '${safe.inHours}h ${safe.inMinutes.remainder(60)}min';
     }
-    return '${d.inMinutes}min';
+    return '${safe.inMinutes}min';
   }
 
   bool get isOngoing => (type == EventType.sleep || type == EventType.feed) && endTime == null;
@@ -87,8 +96,8 @@ class BabyEvent {
         'id': id,
         'babyId': babyId,
         'type': type.name,
-        'startTime': startTime.toIso8601String(),
-        'endTime': endTime?.toIso8601String(),
+        'startTime': startTime.toUtc().toIso8601String(),
+        'endTime': endTime?.toUtc().toIso8601String(),
         'notes': notes,
         'feedType': feedType?.name,
         'feedSide': feedSide?.name,
@@ -97,15 +106,16 @@ class BabyEvent {
         'hasPee': hasPee,
         'hasPoop': hasPoop,
         'diaperTexture': diaperTexture?.name,
+        'fellAsleep': fellAsleep,
       };
 
   factory BabyEvent.fromJson(Map<String, dynamic> json) => BabyEvent(
         id: json['id'] as String,
         babyId: (json['babyId'] ?? json['baby_id']) as String,
         type: EventType.values.firstWhere((e) => e.name == json['type']),
-        startTime: DateTime.parse((json['startTime'] ?? json['start_time']) as String),
+        startTime: DateTime.parse((json['startTime'] ?? json['start_time']) as String).toLocal(),
         endTime: (json['endTime'] ?? json['end_time']) != null
-            ? DateTime.parse(((json['endTime'] ?? json['end_time']) as String))
+            ? DateTime.parse(((json['endTime'] ?? json['end_time']) as String)).toLocal()
             : null,
         notes: json['notes'] as String?,
         feedType: (json['feedType'] ?? json['feed_type']) != null
@@ -122,6 +132,7 @@ class BabyEvent {
             ? DiaperTexture.values
                 .firstWhere((e) => e.name == (json['diaperTexture'] ?? json['diaper_texture']))
             : null,
+        fellAsleep: (json['fellAsleep'] ?? json['fell_asleep']) as bool? ?? false,
       );
 
   BabyEvent copyWith({
@@ -138,6 +149,7 @@ class BabyEvent {
     bool? hasPee,
     bool? hasPoop,
     DiaperTexture? diaperTexture,
+    bool? fellAsleep,
   }) =>
       BabyEvent(
         id: id ?? this.id,
@@ -153,5 +165,6 @@ class BabyEvent {
         hasPee: hasPee ?? this.hasPee,
         hasPoop: hasPoop ?? this.hasPoop,
         diaperTexture: diaperTexture ?? this.diaperTexture,
+        fellAsleep: fellAsleep ?? this.fellAsleep,
       );
 }

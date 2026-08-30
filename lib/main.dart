@@ -30,6 +30,34 @@ import 'services/navigation_service.dart';
 import 'services/purchase_service.dart';
 import 'services/analytics_service.dart';
 import 'services/review_service.dart';
+import 'services/version_service.dart';
+import 'widgets/update_modal.dart';
+import 'widgets/wake_up_modal.dart';
+
+void _handleNotificationTap(String payload) {
+  if (payload == NotificationService.payloadWakeCheck) {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context == null) return;
+
+    final notificationProvider = context.read<NotificationProvider>();
+    final eventProvider = context.read<EventProvider>();
+    final babyProvider = context.read<BabyProvider>();
+    final baby = babyProvider.currentBaby;
+
+    WakeUpModal.show(
+      context,
+      onYes: () {
+        notificationProvider.onWakeCheckResponse(wokeUp: true);
+        if (baby != null && eventProvider.activeSleepTimer != null) {
+          eventProvider.stopSleepTimer(baby.id);
+        }
+      },
+      onNo: () {
+        notificationProvider.onWakeCheckResponse(wokeUp: false);
+      },
+    );
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +80,9 @@ void main() async {
   await initializeDateFormatting();
   await ReviewService.init();
 
-  await NotificationService.initialize();
+  await NotificationService.initialize(
+    onTap: _handleNotificationTap,
+  );
   try {
     final isProduction = !kDebugMode;
     final revenueCatKey = isProduction
@@ -118,12 +148,14 @@ class _AppNavigator extends StatefulWidget {
 
 class _AppNavigatorState extends State<_AppNavigator> {
   bool? _showOnboarding;
+  VersionInfo? _pendingUpdate;
 
   @override
   void initState() {
     super.initState();
     _checkOnboarding();
     _connectProviders();
+    _checkForUpdate();
   }
 
   void _connectProviders() {
@@ -192,6 +224,34 @@ class _AppNavigatorState extends State<_AppNavigator> {
     if (mounted) setState(() => _showOnboarding = !complete);
   }
 
+  Future<void> _checkForUpdate() async {
+    final versionInfo = await VersionService.checkForUpdate();
+    if (!versionInfo.hasUpdate || !mounted) return;
+
+    _pendingUpdate = versionInfo;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final update = _pendingUpdate;
+      if (update == null || !mounted) return;
+      final navigator = NavigationService.navigatorKey.currentState;
+      if (navigator == null) return;
+
+      _pendingUpdate = null;
+
+      navigator.push(PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: !update.isForceUpdate,
+        barrierColor: Colors.black54,
+        pageBuilder: (_, __, ___) => UpdateModal(
+          latestVersion: update.latestVersion,
+          releaseNotes: update.releaseNotes,
+          storeUrl: update.storeUrl,
+          isForceUpdate: update.isForceUpdate,
+          onDismiss: () => navigator.pop(),
+        ),
+      ));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
@@ -199,6 +259,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      navigatorKey: NavigationService.navigatorKey,
       title: 'NestRoutine',
       locale: localeProvider.locale,
       theme: AppTheme.darkTheme,
