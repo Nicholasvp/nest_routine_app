@@ -7,6 +7,8 @@ import '../../utils/date_utils.dart';
 import '../event_success_toast.dart';
 import '../scroll_wheel_time_picker.dart';
 
+enum _NewSleepStep { choice, fellAsleep, manual }
+
 class SleepSheet extends StatefulWidget {
   final BabyEvent? activeTimer;
   final BabyEvent? event;
@@ -32,10 +34,13 @@ class SleepSheet extends StatefulWidget {
 class _SleepSheetState extends State<SleepSheet> {
   late DateTime _manualStart;
   late DateTime _manualEnd;
+  late DateTime _fellAsleepStart;
+  _NewSleepStep _step = _NewSleepStep.choice;
 
   @override
   void initState() {
     super.initState();
+    _fellAsleepStart = DateTime.now();
     if (widget.event != null && widget.event!.endTime != null) {
       _manualStart = widget.event!.startTime;
       _manualEnd = widget.event!.endTime!;
@@ -45,9 +50,27 @@ class _SleepSheetState extends State<SleepSheet> {
     }
   }
 
+  DateTime _resolvedFellAsleepStart() {
+    final now = DateTime.now();
+    var start = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      _fellAsleepStart.hour,
+      _fellAsleepStart.minute,
+    );
+    if (start.isAfter(now)) {
+      start = start.subtract(const Duration(days: 1));
+    }
+    return start;
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
+    final isEditing = widget.event != null && widget.event!.endTime != null;
+    final isTimer = widget.activeTimer != null;
+    final showBack = !isEditing && !isTimer && _step != _NewSleepStep.choice;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -69,72 +92,169 @@ class _SleepSheetState extends State<SleepSheet> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.sleepPurple.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+              if (showBack) ...[
+                IconButton(
+                  onPressed: () => setState(() => _step = _NewSleepStep.choice),
+                  icon: const Icon(Icons.arrow_back_rounded,
+                      color: AppColors.textPrimary),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
-                child: const Icon(Icons.nightlight_round,
-                    color: AppColors.sleepPurple, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                widget.event != null ? strings.adjustSleepTime :
-                  widget.activeTimer != null ? strings.sleepTimer : strings.logSleep,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                const SizedBox(width: 4),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.sleepPurple.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.nightlight_round,
+                      color: AppColors.sleepPurple, size: 28),
+                ),
+                const SizedBox(width: 16),
+              ],
+              Expanded(
+                child: Text(
+                  isEditing
+                      ? strings.adjustSleepTime
+                      : isTimer
+                          ? strings.sleepTimer
+                          : _step == _NewSleepStep.fellAsleep
+                              ? strings.babyFellAsleep
+                              : _step == _NewSleepStep.manual
+                                  ? strings.manualTimeEntry
+                                  : strings.logSleep,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-
-          if (widget.event != null && widget.event!.endTime != null) ...[
+          if (isEditing) ...[
             _buildManualInput(context),
-          ] else if (widget.activeTimer != null) ...[
+          ] else if (isTimer) ...[
             _buildTimerDisplay(context),
             const SizedBox(height: 24),
             _buildManualInput(context),
           ] else ...[
-            _buildQuickTimes(context),
-            const SizedBox(height: 16),
-            _buildManualInput(context),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () {
-                widget.onStartSleep(DateTime.now());
-                Navigator.of(context).pop();
-                EventSuccessToast.show(
-                  context,
-                  icon: Icons.nightlight_round,
-                  color: AppColors.sleepPurple,
-                  title: strings.babyFellAsleep,
-                  subtitle: 'Sleep timer started',
-                );
-              },
-              icon: const Icon(Icons.nightlight_round, size: 20),
-              label: Text(strings.babyFellAsleep,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.sleepPurple,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            switch (_step) {
+              _NewSleepStep.choice => _buildChoice(context),
+              _NewSleepStep.fellAsleep => _buildFellAsleep(context),
+              _NewSleepStep.manual => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildQuickTimes(context),
+                    const SizedBox(height: 16),
+                    _buildManualInput(context),
+                  ],
                 ),
-              ),
-            ),
+            },
           ],
         ],
       ),
     );
   }
 
+  Widget _buildChoice(BuildContext context) {
+    final strings = context.watch<LocaleProvider>().strings;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ChoiceOption(
+          icon: Icons.nightlight_round,
+          label: strings.babyFellAsleep,
+          onTap: () => setState(() {
+            _fellAsleepStart = DateTime.now();
+            _step = _NewSleepStep.fellAsleep;
+          }),
+        ),
+        const SizedBox(height: 12),
+        _ChoiceOption(
+          icon: Icons.schedule_rounded,
+          label: strings.manualTimeEntry,
+          onTap: () => setState(() => _step = _NewSleepStep.manual),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFellAsleep(BuildContext context) {
+    final strings = context.watch<LocaleProvider>().strings;
+    final start = _resolvedFellAsleepStart();
+    final duration = DateTime.now().difference(start);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              ScrollWheelTimePicker(
+                label: strings.fellAsleep,
+                time: _fellAsleepStart,
+                onChanged: (t) => setState(() => _fellAsleepStart = t),
+                accentColor: AppColors.sleepPurple,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppDateUtils.formatDuration(duration),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.sleepPurple,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                strings.sinceTime(AppDateUtils.formatTimeAmPm(start,
+                    isPt: strings.pt)),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () {
+            widget.onStartSleep(_resolvedFellAsleepStart());
+            Navigator.of(context).pop();
+            EventSuccessToast.show(
+              context,
+              icon: Icons.nightlight_round,
+              color: AppColors.sleepPurple,
+              title: strings.babyFellAsleep,
+              subtitle: 'Sleep timer started',
+            );
+          },
+          icon: const Icon(Icons.nightlight_round, size: 20),
+          label: Text(strings.babyFellAsleep,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.sleepPurple,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTimerDisplay(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
     final duration = Duration(
-      microseconds: DateTime.now().difference(widget.activeTimer!.startTime).inMicroseconds.clamp(0, 1 << 62),
+      microseconds: DateTime.now()
+          .difference(widget.activeTimer!.startTime)
+          .inMicroseconds
+          .clamp(0, 1 << 62),
     );
     return Container(
       padding: const EdgeInsets.all(24),
@@ -154,7 +274,9 @@ class _SleepSheetState extends State<SleepSheet> {
           ),
           const SizedBox(height: 8),
           Text(
-            strings.sinceTime(AppDateUtils.formatTimeAmPm(widget.activeTimer!.startTime, isPt: strings.pt)),
+            strings.sinceTime(AppDateUtils.formatTimeAmPm(
+                widget.activeTimer!.startTime,
+                isPt: strings.pt)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -182,8 +304,8 @@ class _SleepSheetState extends State<SleepSheet> {
                 label: Text('${minutes}min'),
                 selected: isSelected,
                 onSelected: (_) {
-                  final startTime = DateTime.now()
-                      .subtract(Duration(minutes: minutes));
+                  final startTime =
+                      DateTime.now().subtract(Duration(minutes: minutes));
                   final endTime = DateTime.now();
                   if (widget.onQuickLog != null) {
                     widget.onQuickLog!(startTime, endTime);
@@ -292,6 +414,16 @@ class _SleepSheetState extends State<SleepSheet> {
                       title: strings.adjustSleepTime,
                       subtitle: 'Sleep updated',
                     );
+                  } else if (widget.onQuickLog != null) {
+                    widget.onQuickLog!(_manualStart, _manualEnd);
+                    Navigator.of(context).pop();
+                    EventSuccessToast.show(
+                      context,
+                      icon: Icons.nightlight_round,
+                      color: AppColors.sleepPurple,
+                      title: strings.logSleep,
+                      subtitle: 'Sleep logged',
+                    );
                   } else {
                     widget.onStartSleep(_manualStart);
                     widget.onStopSleep(_manualEnd);
@@ -314,7 +446,7 @@ class _SleepSheetState extends State<SleepSheet> {
                   ),
                 ),
                 child: Text(strings.save,
-                     style: const TextStyle(fontWeight: FontWeight.w600)),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -324,4 +456,52 @@ class _SleepSheetState extends State<SleepSheet> {
   }
 }
 
+class _ChoiceOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
+  const _ChoiceOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.cardDark,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.sleepPurple.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: AppColors.sleepPurple, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

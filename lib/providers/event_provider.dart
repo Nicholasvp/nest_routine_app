@@ -230,12 +230,12 @@ class EventProvider extends ChangeNotifier {
     );
   }
 
-  Future<BabyEvent> startSleepTimer(String babyId) async {
+  Future<BabyEvent> startSleepTimer(String babyId, {DateTime? startTime}) async {
     final event = BabyEvent(
       id: const Uuid().v4(),
       babyId: babyId,
       type: EventType.sleep,
-      startTime: DateTime.now(),
+      startTime: startTime ?? DateTime.now(),
       fellAsleep: true,
     );
     _eventsByBaby[babyId] ??= [];

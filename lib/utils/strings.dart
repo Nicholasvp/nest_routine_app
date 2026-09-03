@@ -119,7 +119,7 @@ class Strings {
   String get adjust => get('Adjust', 'Ajustar');
   String get wakeUp => get('Wake up!', 'Acordou!');
   String get babyFellAsleep => get('Baby fell asleep', 'Bebê dormiu');
-  String get manualTimeEntry => get('Manual time entry', 'Inserir horário manual');
+  String get manualTimeEntry => get('Set time manually', 'Colocar horário manual');
   String get quickDuration => get('Quick duration', 'Duração rápida');
   String get fellAsleep => get('Fell asleep', 'Dormiu');
   String get wokeUp => get('Woke up', 'Acordou');

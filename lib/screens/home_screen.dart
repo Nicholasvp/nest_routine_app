@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 backgroundColor: AppColors.cardDark,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(
-                    parent: BouncingScrollPhysics(),
+                    parent: ClampingScrollPhysics(),
                   ),
                   child: Column(
                     children: [
@@ -442,18 +442,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (_) => SleepSheet(
         activeTimer: activeTimer,
         onStartSleep: (startTime) {
-          if (startTime.isAfter(DateTime.now().subtract(const Duration(minutes: 1)))) {
-            eventProvider.startSleepTimer(babyId);
-          } else {
-            final event = BabyEvent(
-              id: const Uuid().v4(),
-              babyId: babyId,
-              type: EventType.sleep,
-              startTime: startTime,
-              fellAsleep: true,
-            );
-            eventProvider.addEvent(event);
-          }
+          eventProvider.startSleepTimer(babyId, startTime: startTime);
         },
         onStopSleep: (endTime) {
           eventProvider.stopSleepTimer(babyId, endTime: endTime);

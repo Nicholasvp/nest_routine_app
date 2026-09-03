@@ -37,7 +37,10 @@ class _FeedSheetState extends State<FeedSheet> {
   late FeedSide _feedSide;
   late int _volumeMl;
   late DateTime _feedStartTime;
-  late DateTime _feedEndTime;
+  late int _durationMinutes;
+
+  DateTime get _feedEndTime =>
+      _feedStartTime.add(Duration(minutes: _durationMinutes));
 
   @override
   void initState() {
@@ -47,14 +50,33 @@ class _FeedSheetState extends State<FeedSheet> {
       _feedSide = widget.event!.feedSide ?? FeedSide.left;
       _volumeMl = widget.event!.volumeMl ?? 60;
       _feedStartTime = widget.event!.startTime;
-      _feedEndTime = widget.event!.endTime ?? DateTime.now();
-    } else {
+      _durationMinutes = _durationFrom(widget.event!);
+    } else if (widget.activeTimer != null) {
       _feedType = FeedType.breast;
       _feedSide = widget.activeTimer?.feedSide ?? FeedSide.left;
       _volumeMl = 60;
+      _feedStartTime = widget.activeTimer!.startTime;
+      _durationMinutes = DateTime.now()
+          .difference(widget.activeTimer!.startTime)
+          .inMinutes
+          .clamp(1, 120);
+    } else {
+      _feedType = FeedType.breast;
+      _feedSide = FeedSide.left;
+      _volumeMl = 60;
       _feedStartTime = DateTime.now().subtract(const Duration(minutes: 15));
-      _feedEndTime = DateTime.now();
+      _durationMinutes = 15;
     }
+  }
+
+  int _durationFrom(BabyEvent event) {
+    if (event.durationMinutes != null && event.durationMinutes! > 0) {
+      return event.durationMinutes!.clamp(1, 120);
+    }
+    if (event.endTime != null) {
+      return event.endTime!.difference(event.startTime).inMinutes.clamp(1, 120);
+    }
+    return 15;
   }
 
   @override
@@ -118,7 +140,7 @@ class _FeedSheetState extends State<FeedSheet> {
             const SizedBox(height: 20),
             _buildSideSelector(context),
             const SizedBox(height: 20),
-            _buildTimePickersInline(context, strings),
+            _buildTimeAndDurationPickers(strings),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -186,45 +208,32 @@ class _FeedSheetState extends State<FeedSheet> {
     );
   }
 
-  Widget _buildTimePickersInline(BuildContext context, Strings strings) {
+  Widget _buildTimeAndDurationPickers(Strings strings, {EdgeInsetsGeometry? margin}) {
     return Container(
+      margin: margin,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: ScrollWheelTimePicker(
-                  label: strings.startTime,
-                  time: _feedStartTime,
-                  onChanged: (t) => setState(() => _feedStartTime = t),
-                  accentColor: AppColors.feedOrange,
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(Icons.arrow_forward,
-                    color: AppColors.textTertiary, size: 18),
-              ),
-              Expanded(
-                child: ScrollWheelTimePicker(
-                  label: strings.endTime,
-                  time: _feedEndTime,
-                  onChanged: (t) => setState(() => _feedEndTime = t),
-                  accentColor: AppColors.feedOrange,
-                ),
-              ),
-            ],
+          Expanded(
+            child: ScrollWheelTimePicker(
+              label: strings.startTime,
+              time: _feedStartTime,
+              onChanged: (t) => setState(() => _feedStartTime = t),
+              accentColor: AppColors.feedOrange,
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 13),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ScrollWheelDurationPicker(
+              label: strings.duration,
+              minutes: _durationMinutes,
+              onChanged: (m) => setState(() => _durationMinutes = m),
+              accentColor: AppColors.feedOrange,
+            ),
           ),
         ],
       ),
@@ -272,48 +281,9 @@ class _FeedSheetState extends State<FeedSheet> {
   Widget _buildEditMode(BuildContext context, Strings strings) {
     return Column(
       children: [
-        Container(
+        _buildTimeAndDurationPickers(
+          strings,
           margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: ScrollWheelTimePicker(
-                      label: strings.startTime,
-                      time: _feedStartTime,
-                      onChanged: (t) => setState(() => _feedStartTime = t),
-                      accentColor: AppColors.feedOrange,
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.arrow_forward,
-                        color: AppColors.textTertiary, size: 18),
-                  ),
-                  Expanded(
-                    child: ScrollWheelTimePicker(
-                      label: strings.endTime,
-                      time: _feedEndTime,
-                      onChanged: (t) => setState(() => _feedEndTime = t),
-                      accentColor: AppColors.feedOrange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13),
-              ),
-            ],
-          ),
         ),
         _buildFeedTypeSelector(context),
         const SizedBox(height: 20),
@@ -356,48 +326,9 @@ class _FeedSheetState extends State<FeedSheet> {
   Widget _buildNewFeedMode(BuildContext context, Strings strings) {
     return Column(
       children: [
-        Container(
+        _buildTimeAndDurationPickers(
+          strings,
           margin: const EdgeInsets.only(bottom: 20),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: ScrollWheelTimePicker(
-                      label: strings.startTime,
-                      time: _feedStartTime,
-                      onChanged: (t) => setState(() => _feedStartTime = t),
-                      accentColor: AppColors.feedOrange,
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.arrow_forward,
-                        color: AppColors.textTertiary, size: 18),
-                  ),
-                  Expanded(
-                    child: ScrollWheelTimePicker(
-                      label: strings.endTime,
-                      time: _feedEndTime,
-                      onChanged: (t) => setState(() => _feedEndTime = t),
-                      accentColor: AppColors.feedOrange,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '${strings.duration}: ${_feedEndTime.difference(_feedStartTime).inMinutes} min',
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13),
-              ),
-            ],
-          ),
         ),
         _buildFeedTypeSelector(context),
         const SizedBox(height: 20),
@@ -540,7 +471,7 @@ class _FeedSheetState extends State<FeedSheet> {
   }
 
   void _saveNew() {
-    final duration = _feedEndTime.difference(_feedStartTime).inMinutes;
+    final duration = _durationMinutes;
     final event = BabyEvent(
       id: '',
       babyId: '',
@@ -565,7 +496,7 @@ class _FeedSheetState extends State<FeedSheet> {
 
   void _saveEdit() {
     if (widget.event != null && widget.onUpdateFeed != null) {
-      final duration = _feedEndTime.difference(_feedStartTime).inMinutes;
+      final duration = _durationMinutes;
       final updated = widget.event!.copyWith(
         startTime: _feedStartTime,
         endTime: _feedEndTime,
