@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../providers/baby_provider.dart';
 import '../providers/locale_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../services/purchase_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/storage_service.dart';
 import '../utils/strings.dart';
@@ -19,6 +22,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
   final _nameController = TextEditingController();
   DateTime _dob = DateTime.now().subtract(const Duration(days: 30));
+  bool _isCompleting = false;
 
   @override
   void dispose() {
@@ -321,7 +325,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       )
-                  : _completeOnboarding,
+                   : () => _completeOnboarding(),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.sleepPurple,
                 foregroundColor: Colors.white,
@@ -340,7 +344,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           if (_currentPage < 3)
             TextButton(
-              onPressed: _completeOnboarding,
+              onPressed: () => _completeOnboarding(),
               child: Text(
                 strings.skipSetup,
                 style: const TextStyle(
@@ -352,13 +356,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _completeOnboarding() {
+  Future<void> _completeOnboarding() async {
+    if (_isCompleting) return;
+    _isCompleting = true;
+
     final name = _nameController.text.trim();
     if (name.isNotEmpty) {
       context.read<BabyProvider>().addBaby(name, _dob);
     }
-    StorageService.setOnboardingComplete(true);
+    await StorageService.setOnboardingComplete(true);
+    if (!context.mounted) return;
+
+    await _presentPaywall();
+    if (!mounted) return;
+
     Navigator.of(context).pushReplacementNamed('/home');
+  }
+
+  Future<void> _presentPaywall() async {
+    debugPrint('[OnboardingScreen] Opening RevenueCat paywall');
+    try {
+      final isPt = context.read<LocaleProvider>().isPortuguese;
+      await PurchaseService.setPreferredLocale(isPt);
+      final result = await RevenueCatUI.presentPaywallIfNeeded(
+        PurchaseService.proEntitlementId,
+        displayCloseButton: true,
+      );
+      debugPrint('[OnboardingScreen] Paywall result: $result');
+      if (!mounted) return;
+      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+        context.read<SubscriptionProvider>().refresh();
+      }
+    } catch (e) {
+      debugPrint('[OnboardingScreen] Paywall error: $e');
+    }
   }
 }
 

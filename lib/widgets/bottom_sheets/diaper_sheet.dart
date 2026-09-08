@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
+import '../event_date_field.dart';
 import '../event_success_toast.dart';
 import '../scroll_wheel_time_picker.dart';
 
@@ -216,12 +217,36 @@ class _DiaperSheetState extends State<DiaperSheet> {
 
   Widget _buildTimePicker(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
-    return ScrollWheelTimePicker(
-      label: strings.time,
-      time: _selectedTime,
-      onChanged: (t) => setState(() => _selectedTime = t),
-      accentColor: AppColors.diaperTeal,
+    return Column(
+      children: [
+        EventDateField(
+          label: strings.date,
+          date: _selectedTime,
+          onChanged: _setDiaperDate,
+          accentColor: AppColors.diaperTeal,
+          isPt: strings.pt,
+        ),
+        const SizedBox(height: 12),
+        ScrollWheelTimePicker(
+          label: strings.time,
+          time: _selectedTime,
+          onChanged: (t) => setState(() => _selectedTime = t),
+          accentColor: AppColors.diaperTeal,
+        ),
+      ],
     );
+  }
+
+  void _setDiaperDate(DateTime date) {
+    setState(() {
+      _selectedTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
+    });
   }
 
   void _save() {

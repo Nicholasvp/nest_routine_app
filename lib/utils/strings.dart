@@ -154,6 +154,7 @@ class Strings {
 
   // ── Time ──
   String get time => get('Time', 'Horário');
+  String get date => get('Date', 'Data');
 
   // ── Circular Timeline ──
   String get sleeping => get('Sleeping', 'Dormindo');

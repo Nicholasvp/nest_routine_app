@@ -34,6 +34,8 @@ import 'services/version_service.dart';
 import 'widgets/update_modal.dart';
 import 'widgets/wake_up_modal.dart';
 
+const bool kAlwaysShowOnboarding = kDebugMode;
+
 void _handleNotificationTap(String payload) {
   if (payload == NotificationService.payloadWakeCheck) {
     final context = NavigationService.navigatorKey.currentContext;
@@ -220,6 +222,10 @@ class _AppNavigatorState extends State<_AppNavigator> {
   }
 
   void _checkOnboarding() {
+    if (kAlwaysShowOnboarding) {
+      if (mounted) setState(() => _showOnboarding = true);
+      return;
+    }
     final complete = StorageService.isOnboardingComplete;
     if (mounted) setState(() => _showOnboarding = !complete);
   }

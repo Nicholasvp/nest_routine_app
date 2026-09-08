@@ -4,6 +4,7 @@ import '../../models/event.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_utils.dart';
+import '../event_date_field.dart';
 import '../event_success_toast.dart';
 import '../scroll_wheel_time_picker.dart';
 
@@ -48,6 +49,24 @@ class _SleepSheetState extends State<SleepSheet> {
       _manualStart = DateTime.now().subtract(const Duration(hours: 1));
       _manualEnd = DateTime.now();
     }
+  }
+
+  DateTime get _resolvedManualEnd {
+    var end = _manualEnd;
+    if (!end.isAfter(_manualStart)) {
+      end = end.add(const Duration(days: 1));
+    }
+    return end;
+  }
+
+  void _setManualDate(DateTime date) {
+    final delta = DateTime(date.year, date.month, date.day).difference(
+      DateTime(_manualStart.year, _manualStart.month, _manualStart.day),
+    );
+    setState(() {
+      _manualStart = _manualStart.add(delta);
+      _manualEnd = _manualEnd.add(delta);
+    });
   }
 
   DateTime _resolvedFellAsleepStart() {
@@ -342,6 +361,14 @@ class _SleepSheetState extends State<SleepSheet> {
       ),
       child: Column(
         children: [
+          EventDateField(
+            label: strings.date,
+            date: _manualStart,
+            onChanged: _setManualDate,
+            accentColor: AppColors.sleepPurple,
+            isPt: strings.pt,
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -373,7 +400,7 @@ class _SleepSheetState extends State<SleepSheet> {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () {
-                  widget.onStopSleep(_manualEnd);
+                  widget.onStopSleep(_resolvedManualEnd);
                   Navigator.of(context).pop();
                   EventSuccessToast.show(
                     context,
@@ -404,7 +431,7 @@ class _SleepSheetState extends State<SleepSheet> {
                   if (widget.event != null && widget.onUpdateSleep != null) {
                     widget.onUpdateSleep!(widget.event!.copyWith(
                       startTime: _manualStart,
-                      endTime: _manualEnd,
+                      endTime: _resolvedManualEnd,
                     ));
                     Navigator.of(context).pop();
                     EventSuccessToast.show(
@@ -415,7 +442,7 @@ class _SleepSheetState extends State<SleepSheet> {
                       subtitle: 'Sleep updated',
                     );
                   } else if (widget.onQuickLog != null) {
-                    widget.onQuickLog!(_manualStart, _manualEnd);
+                    widget.onQuickLog!(_manualStart, _resolvedManualEnd);
                     Navigator.of(context).pop();
                     EventSuccessToast.show(
                       context,
@@ -426,7 +453,7 @@ class _SleepSheetState extends State<SleepSheet> {
                     );
                   } else {
                     widget.onStartSleep(_manualStart);
-                    widget.onStopSleep(_manualEnd);
+                    widget.onStopSleep(_resolvedManualEnd);
                     Navigator.of(context).pop();
                     EventSuccessToast.show(
                       context,

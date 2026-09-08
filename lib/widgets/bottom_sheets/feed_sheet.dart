@@ -5,6 +5,7 @@ import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_utils.dart';
 import '../../utils/strings.dart';
+import '../event_date_field.dart';
 import '../event_success_toast.dart';
 import '../scroll_wheel_time_picker.dart';
 
@@ -216,28 +217,52 @@ class _FeedSheetState extends State<FeedSheet> {
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: ScrollWheelTimePicker(
-              label: strings.startTime,
-              time: _feedStartTime,
-              onChanged: (t) => setState(() => _feedStartTime = t),
-              accentColor: AppColors.feedOrange,
-            ),
+          EventDateField(
+            label: strings.date,
+            date: _feedStartTime,
+            onChanged: _setFeedDate,
+            accentColor: AppColors.feedOrange,
+            isPt: strings.pt,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: ScrollWheelDurationPicker(
-              label: strings.duration,
-              minutes: _durationMinutes,
-              onChanged: (m) => setState(() => _durationMinutes = m),
-              accentColor: AppColors.feedOrange,
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ScrollWheelTimePicker(
+                  label: strings.startTime,
+                  time: _feedStartTime,
+                  onChanged: (t) => setState(() => _feedStartTime = t),
+                  accentColor: AppColors.feedOrange,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ScrollWheelDurationPicker(
+                  label: strings.duration,
+                  minutes: _durationMinutes,
+                  onChanged: (m) => setState(() => _durationMinutes = m),
+                  accentColor: AppColors.feedOrange,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  void _setFeedDate(DateTime date) {
+    setState(() {
+      _feedStartTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        _feedStartTime.hour,
+        _feedStartTime.minute,
+      );
+    });
   }
 
   void _setFeedSide(FeedSide side) {
