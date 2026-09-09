@@ -34,7 +34,7 @@ import 'services/version_service.dart';
 import 'widgets/update_modal.dart';
 import 'widgets/wake_up_modal.dart';
 
-const bool kAlwaysShowOnboarding = kDebugMode;
+const bool kAlwaysShowOnboarding = false;
 
 void _handleNotificationTap(String payload) {
   if (payload == NotificationService.payloadWakeCheck) {
@@ -181,6 +181,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
         if (!mounted) return;
         if (authState.session != null) {
           _syncDataFromCloud(authProvider, babyProvider, eventProvider);
+          _checkOnboarding();
         } else {
           babyProvider.clearBabies();
           eventProvider.clearEvents();
@@ -226,7 +227,8 @@ class _AppNavigatorState extends State<_AppNavigator> {
       if (mounted) setState(() => _showOnboarding = true);
       return;
     }
-    final complete = StorageService.isOnboardingComplete;
+    final userId = context.read<AuthProvider>().user?.id;
+    final complete = StorageService.isOnboardingCompleteFor(userId);
     if (mounted) setState(() => _showOnboarding = !complete);
   }
 

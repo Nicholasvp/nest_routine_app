@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import '../providers/auth_provider.dart';
 import '../providers/baby_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/subscription_provider.dart';
@@ -364,7 +365,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (name.isNotEmpty) {
       context.read<BabyProvider>().addBaby(name, _dob);
     }
-    await StorageService.setOnboardingComplete(true);
+    await StorageService.setOnboardingCompleteFor(
+        context.read<AuthProvider>().user?.id, true);
     if (!context.mounted) return;
 
     await _presentPaywall();

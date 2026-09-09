@@ -15,11 +15,16 @@ class StorageService {
 
   static Box get settingsBox => _settingsBox;
 
-  static bool get isOnboardingComplete =>
-      _settingsBox.get('onboarding_complete', defaultValue: false) as bool;
+  static const String _onboardingCompleteKey = 'onboarding_complete';
 
-  static Future<void> setOnboardingComplete(bool value) async {
-    await _settingsBox.put('onboarding_complete', value);
+  static String _onboardingKeyFor(String? userId) =>
+      userId == null ? _onboardingCompleteKey : '$_onboardingCompleteKey.$userId';
+
+  static bool isOnboardingCompleteFor(String? userId) =>
+      _settingsBox.get(_onboardingKeyFor(userId), defaultValue: false) as bool;
+
+  static Future<void> setOnboardingCompleteFor(String? userId, bool value) async {
+    await _settingsBox.put(_onboardingKeyFor(userId), value);
   }
 
   static String? getLocale() => _settingsBox.get('locale') as String?;
