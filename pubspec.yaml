@@ -1,7 +1,7 @@
 name: nestroutine
 description: "Beautiful baby routine tracking app."
 publish_to: 'none'
-version: 1.6.0+9
+version: 1.7.0+10
 
 environment:
   sdk: ^3.9.2
