@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
 import '../services/analytics_service.dart';
+import '../services/meta_ads_service.dart';
 import '../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -49,6 +50,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLogin ? AnalyticsService.login : AnalyticsService.signup,
         AnalyticsService.engagement,
       );
+      if (!_isLogin) {
+        MetaAdsService.instance.logSignUp();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_isLogin ? strings.loginSuccess : strings.loginAccountCreated),

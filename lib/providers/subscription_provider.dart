@@ -28,6 +28,14 @@ class SubscriptionProvider extends ChangeNotifier {
   bool get isPurchaseLoading => _isPurchaseLoading;
   Offerings? get offerings => _offerings;
 
+  Package? packageForProductId(String productId) {
+    final packages = _offerings?.current?.availablePackages ?? const <Package>[];
+    for (final pkg in packages) {
+      if (pkg.storeProduct.identifier == productId) return pkg;
+    }
+    return null;
+  }
+
   Future<void> initialize() async {
     debugPrint('[SubscriptionProvider] Initializing...');
     try {

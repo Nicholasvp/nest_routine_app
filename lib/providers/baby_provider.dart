@@ -5,6 +5,7 @@ import '../utils/storage_service.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
 import '../services/analytics_service.dart';
+import '../services/meta_ads_service.dart';
 
 class BabyProvider extends ChangeNotifier {
   List<Baby> _babies = [];
@@ -58,6 +59,7 @@ class BabyProvider extends ChangeNotifier {
       'baby_id': baby.id,
       'baby_name': baby.name,
     });
+    MetaAdsService.instance.logAddBaby();
     notifyListeners();
   }
 

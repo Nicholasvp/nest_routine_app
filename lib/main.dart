@@ -29,6 +29,7 @@ import 'services/notification_service.dart';
 import 'services/navigation_service.dart';
 import 'services/purchase_service.dart';
 import 'services/analytics_service.dart';
+import 'services/meta_ads_service.dart';
 import 'services/review_service.dart';
 import 'services/version_service.dart';
 import 'widgets/update_modal.dart';
@@ -70,6 +71,8 @@ void main() async {
     url: dotenv.env['SUPABASE_URL']!,
     publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
+  await MetaAdsService.instance.initialize();
 
   await Hive.initFlutter();
   Hive.registerAdapter(BabyAdapter());
@@ -186,6 +189,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
           babyProvider.clearBabies();
           eventProvider.clearEvents();
           _revenueCatLogOut();
+          MetaAdsService.instance.setUserId(null);
         }
       });
     });
@@ -196,6 +200,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
     final userId = authProvider.user?.id;
     if (userId != null) {
       _revenueCatLogIn(userId);
+      MetaAdsService.instance.setUserId(userId);
     }
     babyProvider.loadBabiesFromCloud().then((_) {
       for (final baby in babyProvider.babies) {
@@ -347,6 +352,9 @@ class _MainShellState extends State<MainShell> {
       _analyticsService?.log(AnalyticsService.screenView, AnalyticsService.engagement, properties: {
         'screen': _screenNames[_currentTab],
       });
+      if (_screenNames[_currentTab] == 'insights') {
+        MetaAdsService.instance.logViewInsights();
+      }
     }
   }
 

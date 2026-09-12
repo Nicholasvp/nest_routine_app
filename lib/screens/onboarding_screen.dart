@@ -7,6 +7,7 @@ import '../providers/baby_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/purchase_service.dart';
+import '../services/meta_ads_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/storage_service.dart';
 import '../utils/strings.dart';
@@ -367,6 +368,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     await StorageService.setOnboardingCompleteFor(
         context.read<AuthProvider>().user?.id, true);
+    MetaAdsService.instance.logCompletedTutorial();
     if (!context.mounted) return;
 
     await _presentPaywall();

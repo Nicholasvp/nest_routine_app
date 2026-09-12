@@ -7,6 +7,7 @@ import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/strings.dart';
 import '../services/purchase_service.dart';
+import '../services/meta_ads_service.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -27,15 +28,48 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Future<void> _setLocaleAndCheck() async {
     final isPt = context.read<LocaleProvider>().isPortuguese;
     await PurchaseService.setPreferredLocale(isPt);
-    _checkNativePaywall();
+    await _checkNativePaywall();
+    _logCheckoutStarted();
   }
 
   Future<void> _checkNativePaywall() async {
     final sub = context.read<SubscriptionProvider>();
+    if (sub.offerings == null) {
+      await sub.refresh();
+      if (!mounted) return;
+    }
     final offering = sub.offerings?.current;
     if (offering == null || offering.availablePackages.isEmpty) {
       if (mounted) setState(() => _useNativePaywall = false);
     }
+  }
+
+  void _logCheckoutStarted() {
+    if (!mounted) return;
+    final sub = context.read<SubscriptionProvider>();
+    final packages = sub.offerings?.current?.availablePackages ?? const [];
+    if (packages.isEmpty) return;
+
+    final pkg = packages.firstWhere(
+      (p) => p.identifier.contains('yearly'),
+      orElse: () => packages.first,
+    );
+    MetaAdsService.instance.logInitiatedCheckout(
+      amount: pkg.storeProduct.price,
+      currency: pkg.storeProduct.currencyCode,
+      contentId: pkg.storeProduct.identifier,
+    );
+  }
+
+  void _logPurchase(SubscriptionProvider sub, StoreTransaction transaction) {
+    final product = sub.packageForProductId(transaction.productIdentifier)?.storeProduct;
+
+    MetaAdsService.instance.logPurchase(
+      amount: product?.price ?? 0,
+      currency: product?.currencyCode ?? '',
+      contentId: transaction.productIdentifier,
+      orderId: transaction.transactionIdentifier,
+    );
   }
 
   @override
@@ -49,7 +83,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Widget _buildNativePaywall() {
     return PaywallView(
       onPurchaseCompleted: (customerInfo, storeTransaction) {
-        context.read<SubscriptionProvider>().updateCustomerInfo(customerInfo);
+        final sub = context.read<SubscriptionProvider>();
+        sub.updateCustomerInfo(customerInfo);
+        _logPurchase(sub, storeTransaction);
       },
       onRestoreCompleted: (customerInfo) {
         context.read<SubscriptionProvider>().updateCustomerInfo(customerInfo);
@@ -221,6 +257,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Future<void> _purchase(SubscriptionProvider sub, Package package) async {
     final result = await sub.purchase(package);
+    if (result.isSuccess) {
+      MetaAdsService.instance.logPurchase(
+        amount: package.storeProduct.price,
+        currency: package.storeProduct.currencyCode,
+        contentId: package.storeProduct.identifier,
+        orderId: package.identifier,
+      );
+    }
     if (result.isSuccess && mounted) {
       Navigator.pop(context, true);
     } else if (!result.userCancelled && result.errorMessage != null && mounted) {

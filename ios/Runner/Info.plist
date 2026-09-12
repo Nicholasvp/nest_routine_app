@@ -32,6 +32,40 @@
 				<string>nestroutine</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>facebook</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb1473780261310771</string>
+			</array>
+		</dict>
+	</array>
+	<key>FacebookAppID</key>
+	<string>1473780261310771</string>
+	<key>FacebookClientToken</key>
+	<string>da135b8fcb1b51bc7c83e297b511259b</string>
+	<key>FacebookDisplayName</key>
+	<string>Nest Routine</string>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Usamos seus dados para personalizar anuncios e medir o desempenho dos nossos anuncios.</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>v9wttpbfk9.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>n38lu8286q.skadnetwork</string>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
