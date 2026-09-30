@@ -3,7 +3,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../models/baby.dart';
 import '../models/event.dart';
 import '../providers/baby_provider.dart';
@@ -11,14 +10,19 @@ import '../providers/event_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/navigation_service.dart';
-import '../services/purchase_service.dart';
+import '../services/paywall_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_utils.dart';
 import '../utils/prediction_engine.dart';
 import '../utils/strings.dart';
 
 class InsightsScreen extends StatefulWidget {
-  const InsightsScreen({super.key});
+  /// Indica que a aba foi selecionada. O MainShell passa isso porque o
+  /// IndexedStack constroi todas as abas de uma vez: por aqui detectamos o
+  /// momento real em que o usuario entrou em Insights.
+  const InsightsScreen({super.key, this.isActive = true});
+
+  final bool isActive;
 
   @override
   State<InsightsScreen> createState() => _InsightsScreenState();
@@ -33,6 +37,32 @@ class _InsightsScreenState extends State<InsightsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    if (widget.isActive) _maybePresentPaywall();
+  }
+
+  @override
+  void didUpdateWidget(InsightsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isActive && widget.isActive) _maybePresentPaywall();
+  }
+
+  /// Abrir o paywall ao entrar na aba. E automatico, entao respeita o
+  /// throttle; quando bloqueado, o card "Desbloquear" continua na tela como
+  /// caminho manual para o usuario.
+  Future<void> _maybePresentPaywall() async {
+    if (context.read<SubscriptionProvider>().isPro) return;
+    final sleepTimerActive = context.read<EventProvider>().activeSleepTimer != null;
+
+    // Espera o frame da troca de aba terminar antes de abrir o modal.
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+
+    await PaywallService.present(
+      context,
+      trigger: PaywallTriggerPoint.insightsTabOpen,
+      automatic: true,
+      sleepTimerActive: sleepTimerActive,
+    );
   }
 
   @override
@@ -210,7 +240,10 @@ class _InsightsScreenState extends State<InsightsScreen>
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => _openPaywall(context),
+              onPressed: () => PaywallService.present(
+                context,
+                trigger: PaywallTriggerPoint.insightsGate,
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.sleepPurple,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -219,7 +252,7 @@ class _InsightsScreenState extends State<InsightsScreen>
                 ),
               ),
               child: Text(
-                strings.upgradeToPro,
+                strings.unlock,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -230,21 +263,6 @@ class _InsightsScreenState extends State<InsightsScreen>
         ],
       ),
     );
-  }
-
-  Future<void> _openPaywall(BuildContext context) async {
-    try {
-      final result = await RevenueCatUI.presentPaywallIfNeeded(
-        PurchaseService.proEntitlementId,
-        displayCloseButton: true,
-      );
-      if (!context.mounted) return;
-      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
-        context.read<SubscriptionProvider>().refresh();
-      }
-    } catch (e) {
-      debugPrint('[InsightsScreen] Paywall error: $e');
-    }
   }
 
   Widget _buildPeriodSelector() {

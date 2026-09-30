@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +32,8 @@ import 'services/navigation_service.dart';
 import 'services/purchase_service.dart';
 import 'services/analytics_service.dart';
 import 'services/meta_ads_service.dart';
+import 'services/paywall_service.dart';
+import 'services/paywall_trigger_service.dart';
 import 'services/review_service.dart';
 import 'services/version_service.dart';
 import 'widgets/update_modal.dart';
@@ -84,6 +88,7 @@ void main() async {
   await StorageService.init();
   await initializeDateFormatting();
   await ReviewService.init();
+  await PaywallTriggerService.init();
 
   await NotificationService.initialize(
     onTap: _handleNotificationTap,
@@ -91,10 +96,21 @@ void main() async {
   try {
     final isProduction = !kDebugMode;
     final revenueCatKey = isProduction
-        ? dotenv.env['REVENUECAT_IOS_API_KEY_PROD']!
-        : dotenv.env['REVENUECAT_IOS_API_KEY_DEV']!;
-    debugPrint('[RevenueCat] Using ${isProduction ? "PRODUCTION" : "SANDBOX"} key');
-    await PurchaseService.initialize(iosApiKey: revenueCatKey);
+        ? (Platform.isAndroid
+            ? dotenv.env['REVENUECAT_ANDROID_API_KEY_PROD']
+            : dotenv.env['REVENUECAT_IOS_API_KEY_PROD'])
+        : (Platform.isAndroid
+            ? dotenv.env['REVENUECAT_ANDROID_API_KEY_DEV']
+            : dotenv.env['REVENUECAT_IOS_API_KEY_DEV']);
+
+    if (revenueCatKey == null || revenueCatKey.isEmpty) {
+      debugPrint(
+          '[RevenueCat] ⚠️ No API key configured for ${Platform.operatingSystem} (${isProduction ? 'PRODUCTION' : 'SANDBOX'}) - purchases disabled');
+    } else {
+      debugPrint(
+          '[RevenueCat] Using ${Platform.operatingSystem} ${isProduction ? "PRODUCTION" : "SANDBOX"} key');
+      await PurchaseService.initialize(apiKey: revenueCatKey);
+    }
   } catch (e) {
     debugPrint('RevenueCat init failed: $e');
   }
@@ -308,25 +324,29 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentTab = 0;
   AnalyticsService? _analyticsService;
 
-  final _screens = const [
-    HomeScreen(),
-    HistoryScreen(),
-    InsightsScreen(),
-    ProfileScreen(),
-  ];
-
   final _screenNames = const ['home', 'history', 'insights', 'profile'];
+
+  static const int insightsTab = 2;
 
   BabyProvider? _babyProvider;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     NavigationService.tabIndex.addListener(_onTabChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _analyticsService ??=
+          AnalyticsService(context.read<AuthProvider>().authService);
+      _analyticsService?.log(AnalyticsService.appOpen, AnalyticsService.engagement,
+          properties: {'source': 'cold_start'});
+      _maybeShowAutoPaywall(trigger: PaywallTriggerPoint.appColdStart);
+    });
   }
 
   @override
@@ -341,9 +361,38 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     NavigationService.tabIndex.removeListener(_onTabChanged);
     _babyProvider?.removeListener(_onBabyChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state != AppLifecycleState.resumed) return;
+    _analyticsService?.log(AnalyticsService.appResumed, AnalyticsService.engagement,
+        properties: {'source': 'resumed'});
+    _maybeShowAutoPaywall(trigger: PaywallTriggerPoint.appResume);
+  }
+
+  /// Avalia o paywall automatico. O throttling impede que vire assedio:
+  /// cooldown, limite por dia, carencia de instalacao e bloqueio quando ha
+  /// timer de sono ativo. Veja [PaywallTriggerService] para as regras.
+  Future<void> _maybeShowAutoPaywall({required String trigger}) async {
+    final sleepTimerActive = context.read<EventProvider>().activeSleepTimer != null;
+
+    // Da tempo da UI assentar e evita competir com modais de update/review.
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    if (PaywallService.isPresenting) return;
+
+    await PaywallService.present(
+      context,
+      trigger: trigger,
+      automatic: true,
+      sleepTimerActive: sleepTimerActive,
+    );
   }
 
   void _onTabChanged() {
@@ -377,7 +426,12 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       body: IndexedStack(
         index: _currentTab,
-        children: _screens,
+        children: [
+          const HomeScreen(),
+          const HistoryScreen(),
+          InsightsScreen(isActive: _currentTab == insightsTab),
+          const ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: _NavBar(
         currentTab: _currentTab,

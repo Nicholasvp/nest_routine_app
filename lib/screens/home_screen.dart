@@ -21,11 +21,10 @@ import '../widgets/bottom_sheets/bug_report_sheet.dart';
 import '../services/navigation_service.dart';
 import '../services/analytics_service.dart';
 import '../services/review_service.dart';
-import '../services/purchase_service.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/notification_provider.dart';
 import '../widgets/notification_settings_modal.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import '../services/paywall_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -625,7 +624,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return GestureDetector(
       onTap: () {
         if (!isPro) {
-          _openPaywall(context);
+          PaywallService.present(
+            context,
+            trigger: PaywallTriggerPoint.homeBanner,
+          );
         } else if (!notificationsEnabled) {
           context.read<NotificationProvider>().requestPermission();
         } else {
@@ -699,21 +701,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  Future<void> _openPaywall(BuildContext context) async {
-    try {
-      final result = await RevenueCatUI.presentPaywallIfNeeded(
-        PurchaseService.proEntitlementId,
-        displayCloseButton: true,
-      );
-      if (!context.mounted) return;
-      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
-        context.read<SubscriptionProvider>().refresh();
-      }
-    } catch (e) {
-      debugPrint('[HomeScreen] Paywall error: $e');
-    }
   }
 
   void _confirmDelete(

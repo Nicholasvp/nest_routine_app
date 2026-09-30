@@ -1,11 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../providers/notification_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/subscription_provider.dart';
-import '../services/purchase_service.dart';
+import '../services/paywall_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/strings.dart';
 
@@ -144,7 +143,10 @@ class _NotificationSettingsScreenState
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => _openPaywall(context),
+              onPressed: () => PaywallService.present(
+                context,
+                trigger: PaywallTriggerPoint.notificationSettingsGate,
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.sleepPurple,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -164,21 +166,6 @@ class _NotificationSettingsScreenState
         ],
       ),
     );
-  }
-
-  Future<void> _openPaywall(BuildContext context) async {
-    try {
-      final result = await RevenueCatUI.presentPaywallIfNeeded(
-        PurchaseService.proEntitlementId,
-        displayCloseButton: true,
-      );
-      if (!context.mounted) return;
-      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
-        context.read<SubscriptionProvider>().refresh();
-      }
-    } catch (e) {
-      debugPrint('[NotificationSettingsScreen] Paywall error: $e');
-    }
   }
 
   Widget _buildBody(NotificationProvider provider, Strings strings) {

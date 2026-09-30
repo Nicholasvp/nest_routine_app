@@ -7,7 +7,10 @@ import '../utils/storage_service.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
 import '../services/analytics_service.dart';
+import '../services/navigation_service.dart';
 import '../services/review_service.dart';
+import '../services/paywall_service.dart';
+import '../services/paywall_trigger_service.dart';
 import '../services/widget_service.dart';
 import 'notification_provider.dart';
 
@@ -224,6 +227,7 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(event.babyId);
+    unawaited(_maybePaywallAfterEvent());
 
     _notificationProvider?.onEventAdded(
       events: _eventsByBaby[event.babyId] ?? [],
@@ -250,6 +254,7 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(babyId);
+    unawaited(_maybePaywallAfterEvent());
     _notificationProvider?.startWakeCheckLoop();
     return event;
   }
@@ -275,6 +280,7 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(babyId);
+    unawaited(_maybePaywallAfterEvent());
     _notificationProvider?.cancelWakeCheckLoop();
   }
 
@@ -298,6 +304,7 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(babyId);
+    unawaited(_maybePaywallAfterEvent());
     return event;
   }
 
@@ -345,6 +352,50 @@ class EventProvider extends ChangeNotifier {
     });
     notifyListeners();
     _refreshWidget(babyId);
+    unawaited(_maybePaywallAfterEvent());
+  }
+
+  /// Gatilho de "momento de valor": depois que o usuario registra eventos.
+  ///
+  /// Nao abre a cada evento: precisa atingir o marco de
+  /// [PaywallTriggerService.eventsBetweenPaywalls] e ainda passar pelo
+  /// throttle normal (cooldown, limite diario, carencia, dispensas).
+  Future<void> _maybePaywallAfterEvent() async {
+    await PaywallTriggerService.recordEventLogged();
+
+    // Visibilidade completa do gatilho: sem isso nao ha como saber se o
+    // problema e o marco, o contexto ou o throttle.
+    final events = PaywallTriggerService.eventsSinceLastPaywall;
+    debugPrint(
+        '[EventProvider] eventos desde o ultimo paywall: $events/${PaywallTriggerService.eventsBetweenPaywalls}');
+
+    if (events < PaywallTriggerService.eventsBetweenPaywalls) {
+      return;
+    }
+
+    // Consome o marco antes de esperar, para eventos em sequencia nao
+    // dispararem varias vezes.
+    await PaywallTriggerService.resetEventCounter();
+
+    // Espera o bottom sheet fechar e o toast aparecer antes de abrir o modal.
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context == null) {
+      debugPrint('[EventProvider] sem contexto do navigator, paywall abortado');
+      return;
+    }
+    if (!context.mounted) {
+      debugPrint('[EventProvider] contexto desmontado, paywall abortado');
+      return;
+    }
+
+    await PaywallService.present(
+      context,
+      trigger: PaywallTriggerPoint.eventLogged,
+      automatic: true,
+      sleepTimerActive: _activeSleepTimer != null,
+    );
   }
 
   void _updateTickTimerState() {

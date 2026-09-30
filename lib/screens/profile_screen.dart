@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,8 @@ import '../theme/app_colors.dart';
 import '../utils/strings.dart';
 import 'notification_settings_screen.dart';
 import '../services/navigation_service.dart';
+import '../services/paywall_service.dart';
+import '../services/paywall_trigger_service.dart';
 import '../services/purchase_service.dart';
 import '../services/review_service.dart';
 import '../widgets/bottom_sheets/bug_report_sheet.dart';
@@ -359,7 +362,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppColors.textTertiary, size: 20),
             onTap: () => ReviewService.requestReview(),
           ),
+          if (kDebugMode) ...[
+            const Divider(height: 1, color: AppColors.cardBorder),
+            _SettingsRow(
+              icon: Icons.science_outlined,
+              label: 'Debug: resetar regras do paywall',
+              trailing: const Icon(Icons.refresh_rounded,
+                  color: AppColors.sleepPurple, size: 20),
+              onTap: () => _debugResetPaywallRules(context),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  /// O throttle tem carencia de 1 dia e desliga apos 3 dispensas, o que
+  /// torna o paywall automatico intestavel em tempo real sem isso.
+  Future<void> _debugResetPaywallRules(BuildContext context) async {
+    await PaywallTriggerService.debugReset();
+    if (!context.mounted) return;
+    final state = PaywallTriggerService.debugState;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Paywall resetado\n'
+          'dispensas=${state['dismiss_count']} '
+          'eventos=${state['events_since_last']} '
+          'intervalo=${state['required_interval_hours']}h',
+        ),
+        backgroundColor: AppColors.sleepPurple,
+        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -512,7 +545,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: FilledButton.icon(
               onPressed: sub.isPro
                   ? _openCustomerCenter
-                  : () => _openPaywall(context),
+                  : () => PaywallService.present(
+                        context,
+                        trigger: PaywallTriggerPoint.profileUpgrade,
+                      ),
                 icon: Icon(sub.isPro ? Icons.settings_rounded : Icons.star_rounded, size: 18),
                 label: Text(sub.isPro ? strings.manageSubscription : strings.upgradeToPro),
                 style: FilledButton.styleFrom(
@@ -551,25 +587,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _openCustomerCenter() async {
     await RevenueCatUI.presentCustomerCenter();
-  }
-
-  Future<void> _openPaywall(BuildContext context) async {
-    debugPrint('[ProfileScreen] Opening RevenueCat paywall');
-    try {
-      final isPt = context.read<LocaleProvider>().isPortuguese;
-      await PurchaseService.setPreferredLocale(isPt);
-      final result = await RevenueCatUI.presentPaywallIfNeeded(
-        PurchaseService.proEntitlementId,
-        displayCloseButton: true,
-      );
-      debugPrint('[ProfileScreen] Paywall result: $result');
-      if (!context.mounted) return;
-      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
-        context.read<SubscriptionProvider>().refresh();
-      }
-    } catch (e) {
-      debugPrint('[ProfileScreen] Paywall error: $e');
-    }
   }
 
   Future<void> _restorePurchases(BuildContext context) async {

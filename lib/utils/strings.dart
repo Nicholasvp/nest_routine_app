@@ -229,6 +229,7 @@ class Strings {
   String get proUnlocked => get('All premium features unlocked', 'Todos os recursos premium desbloqueados');
   String get proUnlockCta => get('Unlock insights, predictions & more', 'Desbloqueie insights, previsões e mais');
   String get upgradeToPro => get('Upgrade to Pro', 'Tornar-se Pro');
+  String get unlock => get('Unlock', 'Desbloquear');
   String get manageSubscription => get('Manage Subscription', 'Gerenciar Assinatura');
   String get restorePurchases => get('Restore Purchases', 'Restaurar Compras');
   String get purchasesRestored => get('Purchases restored successfully!', 'Compras restauradas com sucesso!');
@@ -319,8 +320,8 @@ class Strings {
   // ── Pro Gate ──
   String get unlockInsights => get('Unlock Insights', 'Desbloquear Insights');
   String get unlockInsightsDesc => get(
-    'Upgrade to Pro to see detailed analytics\nand predictions for your baby',
-    'Torne-se Pro para ver análises detalhadas\ne previsões do seu bebê',
+    'Unlock to see detailed analytics\nand predictions for your baby',
+    'Desbloqueie para ver análises detalhadas\ne previsões do seu bebê',
   );
   String get unlockNotifications => get('Unlock Smart Notifications', 'Desbloquear Notificações Inteligentes');
   String get unlockNotificationsDesc => get(

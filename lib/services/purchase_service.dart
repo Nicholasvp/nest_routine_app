@@ -7,13 +7,14 @@ class PurchaseService {
   static const proEntitlementId = 'Nest Routine Pro';
 
   static Future<void> initialize({
-    required String iosApiKey,
+    required String apiKey,
     bool isPortuguese = false,
   }) async {
     await Purchases.setLogLevel(LogLevel.debug);
-    debugPrint('[PurchaseService] Initializing with key: ${iosApiKey.substring(0, 8)}...');
+    debugPrint(
+        '[PurchaseService] Initializing with key: ${apiKey.substring(0, 8)}...');
 
-    final configuration = PurchasesConfiguration(iosApiKey);
+    final configuration = PurchasesConfiguration(apiKey);
 
     if (isPortuguese) {
       configuration.preferredUILocaleOverride = 'pt-BR';

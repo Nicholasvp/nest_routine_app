@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/baby_provider.dart';
 import '../providers/locale_provider.dart';
-import '../providers/subscription_provider.dart';
-import '../services/purchase_service.dart';
+import '../services/analytics_service.dart';
+import '../services/paywall_service.dart';
 import '../services/meta_ads_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/storage_service.dart';
@@ -26,11 +25,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   DateTime _dob = DateTime.now().subtract(const Duration(days: 30));
   bool _isCompleting = false;
 
+  static const _pageNames = ['intro', 'features', 'tutorial', 'setup'];
+
+  AnalyticsService? _analytics;
+  DateTime _pageEnteredAt = DateTime.now();
+  DateTime _openedAt = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _pageEnteredAt = DateTime.now();
+    _openedAt = DateTime.now();
+    _analytics = AnalyticsService(context.read<AuthProvider>().authService);
+    _analytics?.log(AnalyticsService.onboardingStarted, AnalyticsService.onboarding);
+  }
+
+  /// Registra o tempo real em cada pagina do onboarding. Chamado ao sair de
+  /// uma pagina, o que da o dado de onde o usuario trava ou desiste.
+  void _flushPageDuration({bool isLastPage = false}) {
+    final elapsed = DateTime.now().difference(_pageEnteredAt);
+    _analytics?.logDuration(
+      AnalyticsService.onboardingPageView,
+      AnalyticsService.onboarding,
+      duration: elapsed,
+      properties: {
+        'page': _pageNames[_currentPage],
+        'index': _currentPage,
+        'completed': isLastPage,
+      },
+    );
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _onPageChanged(int page) {
+    _flushPageDuration();
+    setState(() => _currentPage = page);
+    _pageEnteredAt = DateTime.now();
   }
 
   @override
@@ -43,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView(
                 controller: _pageController,
-                onPageChanged: (p) => setState(() => _currentPage = p),
+                onPageChanged: _onPageChanged,
                 children: [
                   _buildIntroPage(context, strings),
                   _buildFeaturesPage(context, strings),
@@ -346,7 +382,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           if (_currentPage < 3)
             TextButton(
-              onPressed: () => _completeOnboarding(),
+              onPressed: () => _completeOnboarding(skipped: true),
               child: Text(
                 strings.skipSetup,
                 style: const TextStyle(
@@ -358,18 +394,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Future<void> _completeOnboarding() async {
+  Future<void> _completeOnboarding({bool skipped = false}) async {
     if (_isCompleting) return;
     _isCompleting = true;
 
+    // Providers lidos antes dos awaits para nao atravessar o BuildContext.
+    final babyProvider = context.read<BabyProvider>();
+    final userId = context.read<AuthProvider>().user?.id;
+
     final name = _nameController.text.trim();
-    if (name.isNotEmpty) {
-      context.read<BabyProvider>().addBaby(name, _dob);
+    final totalElapsed = DateTime.now().difference(_openedAt);
+    _flushPageDuration(isLastPage: true);
+
+    if (skipped) {
+      await _analytics?.logDuration(
+        AnalyticsService.onboardingSkipped,
+        AnalyticsService.onboarding,
+        duration: totalElapsed,
+        properties: {'page': _pageNames[_currentPage], 'index': _currentPage},
+      );
+    } else {
+      await _analytics?.logDuration(
+        AnalyticsService.onboardingCompleted,
+        AnalyticsService.onboarding,
+        duration: totalElapsed,
+        properties: {
+          'added_baby': name.isNotEmpty,
+          'pages_viewed': _currentPage + 1,
+        },
+      );
     }
-    await StorageService.setOnboardingCompleteFor(
-        context.read<AuthProvider>().user?.id, true);
+
+    if (name.isNotEmpty) {
+      babyProvider.addBaby(name, _dob);
+    }
+    await StorageService.setOnboardingCompleteFor(userId, true);
     MetaAdsService.instance.logCompletedTutorial();
-    if (!context.mounted) return;
 
     await _presentPaywall();
     if (!mounted) return;
@@ -378,22 +438,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _presentPaywall() async {
-    debugPrint('[OnboardingScreen] Opening RevenueCat paywall');
-    try {
-      final isPt = context.read<LocaleProvider>().isPortuguese;
-      await PurchaseService.setPreferredLocale(isPt);
-      final result = await RevenueCatUI.presentPaywallIfNeeded(
-        PurchaseService.proEntitlementId,
-        displayCloseButton: true,
-      );
-      debugPrint('[OnboardingScreen] Paywall result: $result');
-      if (!mounted) return;
-      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
-        context.read<SubscriptionProvider>().refresh();
-      }
-    } catch (e) {
-      debugPrint('[OnboardingScreen] Paywall error: $e');
-    }
+    debugPrint('[OnboardingScreen] Abrindo paywall de onboarding');
+    await PaywallService.present(
+      context,
+      trigger: PaywallTriggerPoint.onboarding,
+    );
   }
 }
 

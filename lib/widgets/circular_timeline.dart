@@ -1,12 +1,34 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../models/event.dart';
 import '../providers/locale_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_utils.dart';
 
-class CircularTimeline extends StatelessWidget {
+const double _dayMinutes = 24 * 60.0;
+
+const double _minVisibleMinutes = 0.75;
+
+enum _SegmentKind { idealWindow, awake, sleep, activeSleep }
+
+class _TimelineSegment {
+  const _TimelineSegment({
+    required this.startMinute,
+    required this.endMinute,
+    required this.kind,
+    this.eventId,
+  });
+
+  final double startMinute;
+  final double endMinute;
+  final _SegmentKind kind;
+  final String? eventId;
+}
+
+class CircularTimeline extends StatefulWidget {
   final List<BabyEvent> todayEvents;
   final BabyEvent? activeSleep;
   final double? pulseScale;
@@ -23,29 +45,134 @@ class CircularTimeline extends StatelessWidget {
   });
 
   @override
+  State<CircularTimeline> createState() => _CircularTimelineState();
+}
+
+class _CircularTimelineState extends State<CircularTimeline>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
+  static const Duration _revealDuration = Duration(milliseconds: 1600);
+  static const Duration _newEventDuration = Duration(milliseconds: 900);
+  static const Duration _shimmerDuration = Duration(milliseconds: 2600);
+
+  late final AnimationController _revealController;
+  late final Animation<double> _revealAnimation;
+  late final AnimationController _newEventController;
+  late final Animation<double> _newEventAnimation;
+  late final AnimationController _shimmerController;
+
+  Set<String> _knownEventIds = <String>{};
+  Set<String> _paintingEventIds = <String>{};
+  bool _initialRevealDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _revealController = AnimationController(
+      duration: _revealDuration,
+      vsync: this,
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _initialRevealDone = true;
+        }
+      });
+    _revealAnimation = CurvedAnimation(
+      parent: _revealController,
+      curve: Curves.easeOutCubic,
+    );
+
+    _newEventController = AnimationController(
+      duration: _newEventDuration,
+      vsync: this,
+    );
+    _newEventAnimation = CurvedAnimation(
+      parent: _newEventController,
+      curve: Curves.easeOutCubic,
+    );
+
+    _shimmerController = AnimationController(
+      duration: _shimmerDuration,
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _knownEventIds = widget.todayEvents.map((e) => e.id).toSet();
+    _revealController.forward();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !_initialRevealDone) return;
+    _revealController.forward(from: 0);
+  }
+
+  @override
+  void didUpdateWidget(covariant CircularTimeline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final currentIds = widget.todayEvents.map((e) => e.id).toSet();
+    final addedIds = currentIds.difference(_knownEventIds);
+    _knownEventIds = currentIds;
+
+    if (addedIds.isEmpty || !_initialRevealDone) return;
+
+    setState(() => _paintingEventIds = addedIds);
+    _newEventController.forward(from: 0).whenComplete(() {
+      if (!mounted) return;
+      setState(() => _paintingEventIds = <String>{});
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _revealController.dispose();
+    _newEventController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = constraints.maxWidth;
-        return SizedBox(
-          width: size,
-          height: size,
-          child: CustomPaint(
-            painter: _TimelinePainter(
-              todayEvents: todayEvents,
-              activeSleep: activeSleep,
-              now: DateTime.now(),
-            ),
-            child: Center(
-              child: onTap != null
-                  ? GestureDetector(
-                      onTap: onTap,
-                      behavior: HitTestBehavior.opaque,
-                      child: _buildCenterContent(context),
-                    )
-                  : _buildCenterContent(context),
-            ),
-          ),
+    final now = DateTime.now();
+    return AnimatedBuilder(
+      animation: Listenable.merge(<Listenable>[
+        _revealAnimation,
+        _newEventAnimation,
+        _shimmerController,
+      ]),
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.maxWidth;
+            final centerOpacity =
+                ((_revealAnimation.value - 0.35) / 0.65).clamp(0.0, 1.0);
+            return SizedBox(
+              width: size,
+              height: size,
+              child: CustomPaint(
+                painter: _TimelinePainter(
+                  todayEvents: widget.todayEvents,
+                  activeSleep: widget.activeSleep,
+                  now: now,
+                  reveal: _revealAnimation.value,
+                  newEventReveal: _newEventAnimation.value,
+                  paintingEventIds: _paintingEventIds,
+                  shimmer: _shimmerController.value,
+                ),
+                child: Center(
+                  child: Opacity(
+                    opacity: centerOpacity,
+                    child: widget.onTap != null
+                        ? GestureDetector(
+                            onTap: widget.onTap,
+                            behavior: HitTestBehavior.opaque,
+                            child: _buildCenterContent(context),
+                          )
+                        : _buildCenterContent(context),
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -53,9 +180,12 @@ class CircularTimeline extends StatelessWidget {
 
   Widget _buildCenterContent(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
-    if (activeSleep != null) {
+    if (widget.activeSleep != null) {
       final duration = Duration(
-        microseconds: DateTime.now().difference(activeSleep!.startTime).inMicroseconds.clamp(0, 1 << 62),
+        microseconds: DateTime.now()
+            .difference(widget.activeSleep!.startTime)
+            .inMicroseconds
+            .clamp(0, 1 << 62),
       );
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -64,16 +194,16 @@ class CircularTimeline extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
-                if (glowRadius != null && glowRadius! > 0)
+                if (widget.glowRadius != null && widget.glowRadius! > 0)
                   BoxShadow(
                     color: AppColors.sleepPurple.withValues(alpha: 0.4),
-                    blurRadius: glowRadius!,
-                    spreadRadius: glowRadius! * 0.3,
+                    blurRadius: widget.glowRadius!,
+                    spreadRadius: widget.glowRadius! * 0.3,
                   ),
               ],
             ),
             child: Transform.scale(
-              scale: pulseScale ?? 1.0,
+              scale: widget.pulseScale ?? 1.0,
               child: const Icon(
                 Icons.nightlight_round,
                 color: AppColors.sleepPurple,
@@ -110,7 +240,8 @@ class CircularTimeline extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 6, height: 6,
+                  width: 6,
+                  height: 6,
                   decoration: const BoxDecoration(
                     color: AppColors.sleepPurple,
                     shape: BoxShape.circle,
@@ -133,20 +264,20 @@ class CircularTimeline extends StatelessWidget {
     }
 
     final awakeNow = DateTime.now();
-    final lastSleep = todayEvents
-        .where((e) =>
-            e.type == EventType.sleep && e.endTime != null)
+    final lastSleep = widget.todayEvents
+        .where((e) => e.type == EventType.sleep && e.endTime != null)
         .fold<BabyEvent?>(
           null,
           (prev, e) =>
-              prev == null || e.endTime!.isAfter(prev.endTime!)
-                  ? e
-                  : prev,
+              prev == null || e.endTime!.isAfter(prev.endTime!) ? e : prev,
         );
 
     if (lastSleep != null) {
       final awakeDuration = Duration(
-        microseconds: awakeNow.difference(lastSleep.endTime!).inMicroseconds.clamp(0, 1 << 62),
+        microseconds: awakeNow
+            .difference(lastSleep.endTime!)
+            .inMicroseconds
+            .clamp(0, 1 << 62),
       );
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -197,47 +328,206 @@ class CircularTimeline extends StatelessWidget {
 }
 
 class _TimelinePainter extends CustomPainter {
-  final List<BabyEvent> todayEvents;
-  final BabyEvent? activeSleep;
-  final DateTime now;
-
   _TimelinePainter({
     required this.todayEvents,
     this.activeSleep,
     required this.now,
+    required this.reveal,
+    required this.newEventReveal,
+    required this.paintingEventIds,
+    required this.shimmer,
   });
+
+  final List<BabyEvent> todayEvents;
+  final BabyEvent? activeSleep;
+  final DateTime now;
+  final double reveal;
+  final double newEventReveal;
+  final Set<String> paintingEventIds;
+  final double shimmer;
+
+  DateTime get _dayStart => DateTime(now.year, now.month, now.day);
+  DateTime get _dayEnd => DateTime(now.year, now.month, now.day + 1);
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 24;
     final innerRadius = radius * 0.72;
+    final arcRadius = (radius + innerRadius) / 2;
+    final revealedMinutes = reveal * _dayMinutes;
 
     _drawStarDots(canvas, size, center, radius);
     _drawClockRing(canvas, center, radius, innerRadius);
-    _drawIdealSleepWindow(canvas, center, radius, innerRadius);
-    _drawAwakeArcs(canvas, center, radius, innerRadius);
 
-    final sleepEvents = todayEvents
-        .where((e) => e.type == EventType.sleep)
-        .toList();
-    for (final event in sleepEvents) {
-      _drawSleepArc(canvas, center, radius, innerRadius, event);
+    final segments = _buildSegments();
+
+    // Purpura (sono) e sempre desenhado depois do amarelo (acordado), entao
+    // nunca fica por baixo dele.
+    for (final segment in segments) {
+      switch (segment.kind) {
+        case _SegmentKind.idealWindow:
+          _drawIdealWindowSegment(canvas, center, arcRadius, segment);
+          break;
+        case _SegmentKind.awake:
+          _drawAwakeSegment(canvas, center, arcRadius, segment);
+          break;
+        case _SegmentKind.sleep:
+          _drawSleepSegment(canvas, center, arcRadius, segment);
+          break;
+        case _SegmentKind.activeSleep:
+          _drawActiveSleepSegment(canvas, center, radius, arcRadius, segment);
+          break;
+      }
+    }
+
+    _drawPredictedSleepArc(canvas, center, arcRadius);
+    _drawEventDots(canvas, center, arcRadius, revealedMinutes);
+    if (reveal > 0 && reveal < 1) {
+      _drawPaintHead(canvas, center, arcRadius, revealedMinutes);
+    }
+    _drawTimeMarkers(canvas, center, radius + 6);
+    _drawNowIndicator(canvas, center, radius, innerRadius, revealedMinutes);
+  }
+
+  List<_TimelineSegment> _buildSegments() {
+    final dayStart = _dayStart;
+    final dayEnd = _dayEnd;
+    final nowMinutes = _minutesFrom(dayStart, now).clamp(0.0, _dayMinutes);
+    final activeId = activeSleep?.id;
+
+    final sleepSegments = <_TimelineSegment>[];
+
+    for (final event in todayEvents) {
+      if (event.type != EventType.sleep) continue;
+      final endTime = event.endTime;
+      if (endTime == null || event.id == activeId) continue;
+      final segment = _clipToDay(
+        start: event.startTime,
+        end: endTime,
+        kind: _SegmentKind.sleep,
+        eventId: event.id,
+        dayStart: dayStart,
+        dayEnd: dayEnd,
+      );
+      if (segment != null) sleepSegments.add(segment);
     }
 
     if (activeSleep != null) {
-      _drawActiveSleepArc(canvas, center, radius, innerRadius, activeSleep!);
+      final segment = _clipToDay(
+        start: activeSleep!.startTime,
+        end: now,
+        kind: _SegmentKind.activeSleep,
+        eventId: activeSleep!.id,
+        dayStart: dayStart,
+        dayEnd: dayEnd,
+      );
+      if (segment != null) sleepSegments.add(segment);
     }
 
-    _drawPredictedSleepArc(canvas, center, radius, innerRadius);
-    _drawEventDots(canvas, center, radius, innerRadius);
-    _drawTimeMarkers(canvas, center, radius + 6);
-    _drawNowIndicator(canvas, center, radius, innerRadius);
+    sleepSegments.sort((a, b) => a.startMinute.compareTo(b.startMinute));
+
+    // O amarelo e o complemento do sono dentro do dia: assim ele nunca
+    // invade um arco roxo.
+    final awakeSegments = <_TimelineSegment>[];
+    var cursor = 0.0;
+    for (final sleep in sleepSegments) {
+      if (sleep.startMinute > cursor) {
+        awakeSegments.add(
+          _TimelineSegment(
+            startMinute: cursor,
+            endMinute: math.min(sleep.startMinute, nowMinutes),
+            kind: _SegmentKind.awake,
+          ),
+        );
+      }
+      cursor = math.max(cursor, sleep.endMinute);
+    }
+    if (cursor < nowMinutes) {
+      awakeSegments.add(
+        _TimelineSegment(
+          startMinute: cursor,
+          endMinute: nowMinutes,
+          kind: _SegmentKind.awake,
+        ),
+      );
+    }
+
+    return <_TimelineSegment>[
+      ..._idealWindowSegments(),
+      ...awakeSegments.where(
+          (s) => s.endMinute - s.startMinute > _minVisibleMinutes),
+      ...sleepSegments,
+    ];
   }
 
+  List<_TimelineSegment> _idealWindowSegments() {
+    return const <_TimelineSegment>[
+      _TimelineSegment(
+        startMinute: 0,
+        endMinute: 7 * 60,
+        kind: _SegmentKind.idealWindow,
+      ),
+      _TimelineSegment(
+        startMinute: 21 * 60,
+        endMinute: _dayMinutes,
+        kind: _SegmentKind.idealWindow,
+      ),
+    ];
+  }
+
+  _TimelineSegment? _clipToDay({
+    required DateTime start,
+    required DateTime end,
+    required _SegmentKind kind,
+    required String? eventId,
+    required DateTime dayStart,
+    required DateTime dayEnd,
+  }) {
+    if (!end.isAfter(start)) return null;
+    if (!start.isBefore(dayEnd) || !end.isAfter(dayStart)) return null;
+
+    final startMinute =
+        start.isAfter(dayStart) ? _minutesFrom(dayStart, start) : 0.0;
+    final endMinute =
+        end.isBefore(dayEnd) ? _minutesFrom(dayStart, end) : _dayMinutes;
+
+    if (endMinute - startMinute <= _minVisibleMinutes) return null;
+
+    return _TimelineSegment(
+      startMinute: startMinute.clamp(0.0, _dayMinutes),
+      endMinute: endMinute.clamp(0.0, _dayMinutes),
+      kind: kind,
+      eventId: eventId,
+    );
+  }
+
+  double _visibleEnd(_TimelineSegment segment) {
+    var limit = reveal * _dayMinutes;
+    final id = segment.eventId;
+    if (id != null && paintingEventIds.contains(id)) {
+      final grown = segment.startMinute +
+          (segment.endMinute - segment.startMinute) * newEventReveal;
+      if (grown < limit) limit = grown;
+    }
+    return math.min(segment.endMinute, limit);
+  }
+
+  double? _visibleSweep(_TimelineSegment segment) {
+    final visibleEnd = _visibleEnd(segment);
+    final visibleMinutes = visibleEnd - segment.startMinute;
+    if (visibleMinutes <= _minVisibleMinutes) return null;
+    return (visibleMinutes / _dayMinutes) * 2 * math.pi;
+  }
+
+  double _angleFor(double minute) =>
+      -math.pi / 2 + (minute / _dayMinutes) * 2 * math.pi;
+
+  double _minutesFrom(DateTime origin, DateTime value) =>
+      value.difference(origin).inMicroseconds / Duration.microsecondsPerMinute;
+
   void _drawStarDots(Canvas canvas, Size size, Offset center, double radius) {
-    final paint = Paint()
-      ..color = AppColors.starColor.withValues(alpha: 0.3);
+    final paint = Paint()..color = AppColors.starColor.withValues(alpha: 0.3);
     final random = math.Random(42);
     for (int i = 0; i < 30; i++) {
       final angle = random.nextDouble() * 2 * math.pi;
@@ -252,7 +542,8 @@ class _TimelinePainter extends CustomPainter {
     }
   }
 
-  void _drawClockRing(Canvas canvas, Offset center, double radius, double innerRadius) {
+  void _drawClockRing(
+      Canvas canvas, Offset center, double radius, double innerRadius) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
@@ -266,43 +557,30 @@ class _TimelinePainter extends CustomPainter {
     canvas.drawCircle(center, innerRadius, innerPaint);
   }
 
-  void _drawAwakeArcs(Canvas canvas, Offset center, double radius,
-      double innerRadius) {
-    final completedSleeps = todayEvents
-        .where((e) => e.type == EventType.sleep && e.endTime != null)
-        .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+  void _drawIdealWindowSegment(
+      Canvas canvas, Offset center, double arcRadius, _TimelineSegment segment) {
+    final sweep = _visibleSweep(segment);
+    if (sweep == null) return;
 
-    if (completedSleeps.isEmpty) {
-      _drawAwakeArc(canvas, center, radius, innerRadius,
-          DateTime(now.year, now.month, now.day), now);
-      return;
-    }
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round
+      ..color = AppColors.sleepPurple.withValues(alpha: 0.08);
 
-    final midnight = DateTime(now.year, now.month, now.day);
-
-    _drawAwakeArc(canvas, center, radius, innerRadius,
-        midnight, completedSleeps.first.startTime);
-
-    for (int i = 0; i < completedSleeps.length - 1; i++) {
-      _drawAwakeArc(canvas, center, radius, innerRadius,
-          completedSleeps[i].endTime!, completedSleeps[i + 1].startTime);
-    }
-
-    final lastEnd = completedSleeps.last.endTime!;
-    final endOfAwake = activeSleep?.startTime ?? now;
-    if (endOfAwake.isAfter(lastEnd)) {
-      _drawAwakeArc(canvas, center, radius, innerRadius, lastEnd, endOfAwake);
-    }
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: arcRadius),
+      _angleFor(segment.startMinute),
+      sweep,
+      false,
+      paint,
+    );
   }
 
-  void _drawAwakeArc(Canvas canvas, Offset center, double radius,
-      double innerRadius, DateTime from, DateTime to) {
-    final startAngle = _timeToAngle(from) - math.pi / 2;
-    final endAngle = _timeToAngle(to) - math.pi / 2;
-    final sweepAngle = _normalizeAngle(endAngle - startAngle);
-
-    if (sweepAngle < 0.01 || sweepAngle > 2 * math.pi - 0.01) return;
+  void _drawAwakeSegment(
+      Canvas canvas, Offset center, double arcRadius, _TimelineSegment segment) {
+    final sweep = _visibleSweep(segment);
+    if (sweep == null) return;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -311,43 +589,18 @@ class _TimelinePainter extends CustomPainter {
       ..color = AppColors.wakeYellow.withValues(alpha: 0.2);
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: (radius + innerRadius) / 2),
-      startAngle,
-      sweepAngle,
+      Rect.fromCircle(center: center, radius: arcRadius),
+      _angleFor(segment.startMinute),
+      sweep,
       false,
       paint,
     );
   }
 
-  void _drawIdealSleepWindow(
-      Canvas canvas, Offset center, double radius, double innerRadius) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 16
-      ..strokeCap = StrokeCap.round
-      ..color = AppColors.sleepPurple.withValues(alpha: 0.08);
-    final startAngle = -math.pi / 2 + (21 * 60 / (24 * 60)) * 2 * math.pi;
-    final endAngle = -math.pi / 2 + (7 * 60 / (24 * 60)) * 2 * math.pi;
-    final sweepAngle = endAngle > startAngle
-        ? endAngle - startAngle
-        : 2 * math.pi - startAngle + endAngle;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: (radius + innerRadius) / 2),
-      startAngle,
-      sweepAngle,
-      false,
-      paint,
-    );
-  }
-
-  void _drawSleepArc(Canvas canvas, Offset center, double radius,
-      double innerRadius, BabyEvent event) {
-    if (event.endTime == null) return;
-    final startAngle = _timeToAngle(event.startTime) - math.pi / 2;
-    final endAngle = _timeToAngle(event.endTime!) - math.pi / 2;
-    final sweepAngle = _normalizeAngle(endAngle - startAngle);
-
-    if (sweepAngle < 0.01) return;
+  void _drawSleepSegment(
+      Canvas canvas, Offset center, double arcRadius, _TimelineSegment segment) {
+    final sweep = _visibleSweep(segment);
+    if (sweep == null) return;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -356,21 +609,20 @@ class _TimelinePainter extends CustomPainter {
       ..color = AppColors.sleepPurple.withValues(alpha: 0.3);
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: (radius + innerRadius) / 2),
-      startAngle,
-      sweepAngle,
+      Rect.fromCircle(center: center, radius: arcRadius),
+      _angleFor(segment.startMinute),
+      sweep,
       false,
       paint,
     );
   }
 
-  void _drawActiveSleepArc(Canvas canvas, Offset center, double radius,
-      double innerRadius, BabyEvent event) {
-    final startAngle = _timeToAngle(event.startTime) - math.pi / 2;
-    final nowAngle = _timeToAngle(now) - math.pi / 2;
-    final sweepAngle = _normalizeAngle(nowAngle - startAngle);
+  void _drawActiveSleepSegment(Canvas canvas, Offset center, double radius,
+      double arcRadius, _TimelineSegment segment) {
+    final sweep = _visibleSweep(segment);
+    if (sweep == null) return;
 
-    if (sweepAngle < 0.01) return;
+    final startAngle = _angleFor(segment.startMinute);
 
     final glowPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -380,9 +632,9 @@ class _TimelinePainter extends CustomPainter {
       ..color = AppColors.sleepGlow.withValues(alpha: 0.4);
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: (radius + innerRadius) / 2),
+      Rect.fromCircle(center: center, radius: arcRadius),
       startAngle,
-      sweepAngle,
+      sweep,
       false,
       glowPaint,
     );
@@ -400,16 +652,15 @@ class _TimelinePainter extends CustomPainter {
       ).createShader(Rect.fromCircle(center: center, radius: radius));
 
     canvas.drawArc(
-      Rect.fromCircle(center: center, radius: (radius + innerRadius) / 2),
+      Rect.fromCircle(center: center, radius: arcRadius),
       startAngle,
-      sweepAngle,
+      sweep,
       false,
       paint,
     );
   }
 
-  void _drawPredictedSleepArc(Canvas canvas, Offset center, double radius,
-      double innerRadius) {
+  void _drawPredictedSleepArc(Canvas canvas, Offset center, double arcRadius) {
     final sleepEvents = todayEvents
         .where((e) => e.type == EventType.sleep && e.endTime != null)
         .toList()
@@ -423,17 +674,19 @@ class _TimelinePainter extends CustomPainter {
     if (awakeSince < 30 || activeSleep != null) return;
 
     final predictedMinutes = (90 - awakeSince).clamp(15, 180);
-    final predictedStart = now.add(Duration(minutes: 5));
-    final predictedEnd =
-        predictedStart.add(Duration(minutes: predictedMinutes));
+    final predictedStart = now.add(const Duration(minutes: 5));
+    final predictedEnd = predictedStart.add(Duration(minutes: predictedMinutes));
 
     if (predictedEnd.hour >= 22 || predictedEnd.hour < 6) return;
 
-    final startAngle = _timeToAngle(predictedStart) - math.pi / 2;
-    final endAngle = _timeToAngle(predictedEnd) - math.pi / 2;
-    final sweepAngle = _normalizeAngle(endAngle - startAngle);
+    final dayStart = _dayStart;
+    final startMinute =
+        _minutesFrom(dayStart, predictedStart).clamp(0.0, _dayMinutes);
+    final endMinute =
+        _minutesFrom(dayStart, predictedEnd).clamp(0.0, _dayMinutes);
+    final visibleEnd = math.min(endMinute, reveal * _dayMinutes);
 
-    if (sweepAngle < 0.01) return;
+    if (visibleEnd - startMinute <= _minVisibleMinutes) return;
 
     final dashPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -441,10 +694,12 @@ class _TimelinePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..color = AppColors.sleepPurple.withValues(alpha: 0.2);
 
-    final path = Path();
-    final arcRect =
-        Rect.fromCircle(center: center, radius: (radius + innerRadius) / 2);
-    path.addArc(arcRect, startAngle, sweepAngle);
+    final path = Path()
+      ..addArc(
+        Rect.fromCircle(center: center, radius: arcRadius),
+        _angleFor(startMinute),
+        ((visibleEnd - startMinute) / _dayMinutes) * 2 * math.pi,
+      );
     canvas.drawPath(_dashPath(path, 6), dashPaint);
   }
 
@@ -454,8 +709,9 @@ class _TimelinePainter extends CustomPainter {
       double distance = 0;
       bool draw = true;
       while (distance < metric.length) {
-        final len =
-            dashLength < metric.length - distance ? dashLength : metric.length - distance;
+        final len = dashLength < metric.length - distance
+            ? dashLength
+            : metric.length - distance;
         if (draw) {
           dest.addPath(metric.extractPath(distance, distance + len), Offset.zero);
         }
@@ -466,9 +722,8 @@ class _TimelinePainter extends CustomPainter {
     return dest;
   }
 
-  void _drawEventDots(Canvas canvas, Offset center, double radius,
-      double innerRadius) {
-    final eventRadius = (radius + innerRadius) / 2;
+  void _drawEventDots(
+      Canvas canvas, Offset center, double arcRadius, double revealedMinutes) {
     final dotRadius = 5.0;
 
     final events = todayEvents
@@ -479,9 +734,20 @@ class _TimelinePainter extends CustomPainter {
         .toList();
 
     for (final event in events) {
-      final angle = _timeToAngle(event.startTime) - math.pi / 2;
-      final x = center.dx + math.cos(angle) * eventRadius;
-      final y = center.dy + math.sin(angle) * eventRadius;
+      final minute = _minutesFrom(_dayStart, event.startTime);
+      if (minute < 0 || minute > _dayMinutes) continue;
+
+      final isPainting =
+          newEventReveal > 0 && paintingEventIds.contains(event.id);
+      // Antes do "pincel" passar pelo horario do ponto, ele nao aparece.
+      if (!isPainting && minute > revealedMinutes) continue;
+
+      final appear = isPainting
+          ? Curves.easeOutBack
+              .transform((newEventReveal * 1.4).clamp(0.0, 1.0))
+              .clamp(0.0, 1.0)
+          : 1.0;
+      if (appear <= 0.01) continue;
 
       Color dotColor;
       switch (event.type) {
@@ -496,17 +762,60 @@ class _TimelinePainter extends CustomPainter {
           continue;
       }
 
+      final angle = _angleFor(minute);
+      final offset = Offset(
+        center.dx + math.cos(angle) * arcRadius,
+        center.dy + math.sin(angle) * arcRadius,
+      );
+
+      final pulse = 1.0 + shimmer * 0.6;
+
       final glowPaint = Paint()
-        ..color = dotColor.withValues(alpha: 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      canvas.drawCircle(Offset(x, y), dotRadius + 2, glowPaint);
+        ..color = dotColor.withValues(alpha: (0.18 + shimmer * 0.22) * appear)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      canvas.drawCircle(offset, dotRadius + 2 + pulse * 2.5, glowPaint);
 
-      final dotPaint = Paint()..color = dotColor;
-      canvas.drawCircle(Offset(x, y), dotRadius, dotPaint);
+      final haloPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = dotColor.withValues(alpha: (0.35 - shimmer * 0.2) * appear);
+      canvas.drawCircle(offset, dotRadius + 3 + pulse * 4, haloPaint);
 
-      final innerDotPaint = Paint()..color = Colors.white.withValues(alpha: 0.8);
-      canvas.drawCircle(Offset(x, y), dotRadius * 0.4, innerDotPaint);
+      if (isPainting) {
+        final burstProgress = (newEventReveal * 1.2).clamp(0.0, 1.0);
+        final burstPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5 * (1 - burstProgress)
+          ..color = dotColor.withValues(alpha: (1 - burstProgress) * 0.7);
+        canvas.drawCircle(offset, dotRadius + burstProgress * 22, burstPaint);
+      }
+
+      final dotPaint = Paint()..color = dotColor.withValues(alpha: appear);
+      canvas.drawCircle(offset, dotRadius * appear, dotPaint);
+
+      final innerDotPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.8 * appear);
+      canvas.drawCircle(offset, dotRadius * 0.4 * appear, innerDotPaint);
     }
+  }
+
+  void _drawPaintHead(
+      Canvas canvas, Offset center, double arcRadius, double revealedMinutes) {
+    final angle = _angleFor(revealedMinutes.clamp(0.0, _dayMinutes));
+    final offset = Offset(
+      center.dx + math.cos(angle) * arcRadius,
+      center.dy + math.sin(angle) * arcRadius,
+    );
+    final alpha = (1 - reveal) * 4;
+
+    final glowPaint = Paint()
+      ..color = AppColors.softLavender.withValues(alpha: 0.25 * alpha)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    canvas.drawCircle(offset, 14, glowPaint);
+
+    final headPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.85 * alpha);
+    canvas.drawCircle(offset, 3, headPaint);
   }
 
   void _drawTimeMarkers(Canvas canvas, Offset center, double radius) {
@@ -530,44 +839,49 @@ class _TimelinePainter extends CustomPainter {
     }
   }
 
-  void _drawNowIndicator(
-      Canvas canvas, Offset center, double radius, double innerRadius) {
-    final angle = _timeToAngle(now) - math.pi / 2;
-    final outerX = center.dx + math.cos(angle) * radius;
-    final outerY = center.dy + math.sin(angle) * radius;
-    final innerX = center.dx + math.cos(angle) * innerRadius;
-    final innerY = center.dy + math.sin(angle) * innerRadius;
+  void _drawNowIndicator(Canvas canvas, Offset center, double radius,
+      double innerRadius, double revealedMinutes) {
+    final nowMinutes = _minutesFrom(_dayStart, now).clamp(0.0, _dayMinutes);
+    if (nowMinutes > revealedMinutes) return;
+
+    final angle = _angleFor(nowMinutes);
+    final outer = Offset(
+      center.dx + math.cos(angle) * radius,
+      center.dy + math.sin(angle) * radius,
+    );
+    final inner = Offset(
+      center.dx + math.cos(angle) * innerRadius,
+      center.dy + math.sin(angle) * innerRadius,
+    );
 
     final linePaint = Paint()
       ..color = AppColors.wakeYellow
       ..strokeWidth = 2
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawLine(Offset(innerX, innerY), Offset(outerX, outerY), linePaint);
+    canvas.drawLine(inner, outer, linePaint);
 
     final dotPaint = Paint()..color = AppColors.wakeYellow;
     canvas.drawCircle(
-        Offset(outerX, outerY), 4,
-        dotPaint..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
-    canvas.drawCircle(Offset(outerX, outerY), 3, dotPaint..maskFilter = null);
-  }
-
-  double _timeToAngle(DateTime dt) {
-    final totalMinutes = dt.hour * 60.0 + dt.minute + dt.second / 60.0;
-    return (totalMinutes / (24 * 60)) * 2 * math.pi;
-  }
-
-  double _normalizeAngle(double angle) {
-    while (angle < 0) {
-      angle += 2 * math.pi;
-    }
-    while (angle > 2 * math.pi) {
-      angle -= 2 * math.pi;
-    }
-    return angle;
+        outer, 4, dotPaint..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+    canvas.drawCircle(outer, 3, dotPaint..maskFilter = null);
   }
 
   @override
   bool shouldRepaint(covariant _TimelinePainter oldDelegate) {
+    return reveal != oldDelegate.reveal ||
+        newEventReveal != oldDelegate.newEventReveal ||
+        shimmer != oldDelegate.shimmer ||
+        !_sameIds(paintingEventIds, oldDelegate.paintingEventIds) ||
+        todayEvents.length != oldDelegate.todayEvents.length ||
+        activeSleep?.id != oldDelegate.activeSleep?.id ||
+        now != oldDelegate.now;
+  }
+
+  bool _sameIds(Set<String> a, Set<String> b) {
+    if (a.length != b.length) return false;
+    for (final id in a) {
+      if (!b.contains(id)) return false;
+    }
     return true;
   }
 }
