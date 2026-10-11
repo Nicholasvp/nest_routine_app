@@ -1,0 +1,422 @@
+{
+  "category": "logo-reveal",
+  "duration_s": 10,
+  "fps": 30,
+  "canvas": { "w": 1080, "h": 1920, "aspect": "9:16" },
+  "style": "Calm-premium dark brand open for a baby-routine app. Everything happens in one continuous, uncut 'breath' on a deep-navy ground: nothing slams, nothing flashes, every element rises and settles on the same slow easing family. Soft lavender glow bloom behind the app icon, one sweeping 'sleep curve' line as the single graphic motif, very restrained children's-book warmth (three event dots, one per tracker). Audience: tired new/expecting parents — gentle, quiet, reassuring; no narration, no cuts, no store badge, no URL.",
+  "palette": [
+    "#0D0B1E",
+    "#1A1533",
+    "#2D2654",
+    "#B8A9E8",
+    "#9B7ED8",
+    "#7C5CBF",
+    "#FFD93D",
+    "#E87A5D",
+    "#5DC9B8",
+    "#F0EEF6",
+    "#9892B5"
+  ],
+  "font": "Montserrat",
+  "beats": [0, 12, 40, 60, 96, 114, 132, 186, 204, 222, 246],
+  "export": "mp4",
+
+  "asset_needs": [
+    {
+      "role": "hero",
+      "kind": "logo",
+      "source": "/Users/juliapiresdossantos/projects/nestroutine_app/assets/nest_routine_logo.png",
+      "treatment": "none",
+      "note": "400x400 app launcher icon, PNG, no transparency: it carries its own baked purple gradient square (corner ~#331862 -> edge ~#62348F) with a light/cream-lavender nest mark (~#D3BDC8 / #BFA5BE) centred in it. Do NOT expect a cutout and do NOT plan a transparency-dependent reveal. Composite it whole as a rounded app-icon tile sitting on the deepNavy ground (#0D0B1E -> radial #1A1533/#2D2654 behind it) so the baked square reads as intentional; give it a softLavender/sleepGlow bloom halo so its dark purple edges melt into the background instead of showing a hard square. Do NOT use `npx hyperframes remove-background` — pastel edge ringing is likely and the halo already solves the edge problem. No vector/SVG source exists in the repo, so no draw-on/vectorize path for the logo itself."
+    }
+  ],
+
+  "brief": "A tired parent opens the app and the screen breathes once. Out of deep navy, a single soft curve begins to draw itself — the hook is motion, in the first half-second, before anything is legible. The NestRoutine icon rises with it out of blur into place behind a lavender glow bloom; the mark never punches, it settles. That same curve completes into a wide horizon 'sleep curve' under the icon and then becomes the only thing that changes: three dots land on it one after another in the app's real event colours — Sono (#9B7ED8), Mamada (#E87A5D), Fralda (#5DC9B8) — each held long enough to read, each arriving on the same gentle rhythm, turning the abstract curve into the app's actual job. The wordmark resolves beneath the icon, then the positioning lines arrive as a slow word-by-word exhale over the lockup — 'Entenda o ritmo do seu bebê.' / 'Preveja o que vem a seguir.' / 'Durma melhor.' — with only the last word warmed to wakeYellow. The last ~1.8s is a still hold: icon, wordmark and tagline breathing at 1.012, glow breathing gently, nothing else moving. ONE dominant motion idea: everything in the piece shares a single slow upward rise-and-settle — the same easing, the same breath — so the curve, the icon, the dots and the type feel like one continuous exhale rather than four separate animations.",
+
+  "content": {
+    "block": "logo-outro",
+    "block_type": "hyperframes:block",
+    "block_manifest": {
+      "registry_description": "Cinematic logo reveal with piece-by-piece assembly, glow bloom, tagline fade-in, and URL pill",
+      "ships_at": { "w": 1920, "h": 1080, "duration_s": 6 },
+      "install": "npx hyperframes add logo-outro  (lands in compositions/logo-outro.html)",
+      "verified_by": "npx hyperframes catalog --query \"logo reveal with glow bloom and tagline\" --json -> name=logo-outro, type=block"
+    },
+
+    "selection_rationale": {
+      "chosen": "logo-outro is the ONLY registry item that combines the three things this shot actually needs from a block — a logo asset placement, a glow-bloom layer behind it, and a centred tagline column that fades up — and it is the block named by categories/logo-reveal/module.md. It already obeys the HF contract (one paused timeline registered on window.__timelines, .clip-friendly absolute canvas).",
+      "rejected": [
+        "logo-sting (component): 'A wordmark slams into its final scale, fires one accent ring and one white impact frame' — impact slam + white flash is the exact opposite of this audience's calm. Rejected on energy.",
+        "logo-brand-close (component): 'display-scale wordmark cascades letter by letter … optional tagline and wide-tracked mono URL' — strong structure, but it is a *wordmark* component (no raster logo element, no bloom layer) and it insists on a trailing URL. It would cover the least-used part of our shot and none of the hard parts.",
+        "titlecard-lockup (component): the calm-breather titlecard (optional kicker, one restrained settle move 0.96->1 power3.out, hairline rule drawn left-to-right). Closest in *feel* — we borrow its 'ONE move, no bounce' philosophy and its getTotalLength dash technique as a fallback — but it accepts no raster logo and no bloom, and it has only three single-line text slots, so it cannot express the icon + curve + three coloured dots + three tagline lines.",
+        "yt-logo-intro (block, 1920x1080, 6s): creator-style 'logo stamp POPs on a lined board, kicker gives way to title with an accent arrow chip' — punchy + seeded line distortion, wrong register entirely.",
+        "cta-close / cta-lockup / social-proof-card / store-badge-lockup (components): all end-card / CTA / store-badge framings. The brief explicitly forbids a store badge and a CTA.",
+        "per-word-rise (component): we borrow its motion, not its markup — see secondary_borrowing."
+      ]
+    },
+
+    "customize": {
+      "summary": "Install `logo-outro`, then edit the installed file in place. The reuse target is its STRUCTURE (full-frame absolute canvas + dedicated glow layer behind the logo + centred text column + one paused registered timeline); its LOGO MOTION and TEXT CONTENT are replaced wholesale, and three new layers are added.",
+
+      "canvas": {
+        "from": "1920x1080",
+        "to": "1080x1920",
+        "how": "Change <meta viewport> to width=1080,height=1920; html/body to 1080x1920; root attribute data-width=1080 data-height=1920; .canvas to 1080x1920; and replace every absolute pixel coordinate with the values in content.geometry (they are already authored for 1080x1920)."
+      },
+
+      "duration": {
+        "from_s": 6,
+        "to_s": 10,
+        "how": "root data-duration=\"10\". Delete the block's 6-second schedule entirely (its steps 1-4 below) and rebuild from content.frame_map; all times expressed as frames/30 on ONE timeline."
+      },
+
+      "remove": [
+        "The 5-path inline <svg class=\"logo-svg\"> and the .logo-tl/.logo-tr/.logo-ml/.logo-mr/.logo-bl pieces. Our asset is ONE opaque raster PNG — there are no pieces to assemble, and no transparency to mask.",
+        "Step 1 (pieces slide in from the right x:1920 with ripple stagger) — a horizontal slam at 1920px travel; foreign to this brand and unreadable in portrait.",
+        "Step 2 (scale 1.15 with ease back.out(1.7), then back to 1). HARD CONSTRAINT: this piece never uses back.out or bounce.out.",
+        "The .url-pill markup, its CSS block, and its timeline tween. There is no URL anywhere in the app repo; content.url is null and no store badge may appear.",
+        "The Google Fonts <link> for Inter — it is a network fetch at render time (non-deterministic, and Inter is on the monoculture list). Use the compiler-embedded Montserrat instead (weights 400/700/900 only)."
+      ],
+
+      "keep": [
+        "The full-frame absolute .canvas wrapper and its `overflow:hidden` + relative positioning.",
+        "The separate .logo-glow layer sitting BEHIND .logo-container (z-index 1 vs 2) — its radial-gradient bloom is exactly the effect this shot needs; only its colour, size, position and animation change.",
+        "The centred .text-container column pattern (re-authored as absolutely positioned rows so spacing is exact, see content.geometry).",
+        "The contract: gsap.timeline({paused:true}) registered as window.__timelines['main'], then tl.seek(0)."
+      ],
+
+      "restyle": {
+        "background": "#0a0a0f -> #0D0B1E, plus a static radial pool layer (see geometry.background).",
+        "glow": "rgba(162,89,255,0.25) -> rgba(155,126,216,0.28) core with rgba(13,11,30,0) at 70% (write rgba(...,0) NOT the `transparent` keyword).",
+        "font_family": "Inter -> Montserrat (embedded; no @font-face needed).",
+        "tagline_text": "'Nothing great is made alone.' -> the three pt-BR lines in content.tagline_lines.",
+        "logo_element": "<svg> pieces -> <img src=\"assets/nest_routine_logo.png\" width=\"400\" height=\"400\"> inside a rounded tile.",
+        "icon_motion_replacement": "the deleted pieces assembly -> one soft blur-in rise + a 0.94->1 scale on the whole tile (see content.motion.per_element.icon)."
+      },
+
+      "hero_logo_swap": {
+        "element": ".logo-container > img",
+        "src": "assets/nest_routine_logo.png",
+        "native": "400x400 — display at exactly 400x400 (no upscale, keeps it crisp at 1080 render)",
+        "border_radius": "88px (22% iOS-style squircle) so the baked purple square reads as a deliberate app-icon tile",
+        "box_shadow": "0 0 90px rgba(155,126,216,0.30), 0 30px 80px rgba(0,0,0,0.45)",
+        "do_not": "do not attempt background removal, do not tint with blend modes, do not mask-reveal it (it is fully opaque)"
+      }
+    },
+
+    "secondary_borrowing": [
+      {
+        "item": "soft-blur-in",
+        "type": "component",
+        "use": "technique (do NOT install the component)",
+        "why": "Its documented integration is literally the icon entrance we want: start offset + blurred, tween to y:0/opacity:1/blur(0) with power3.out. Copy its start-state convention (--hf-soft-blur-y = 28px 'standard', blur 18px) as inline CSS + one tween in our root timeline. Installing it would add an extra variables shim and a second script for no benefit."
+      },
+      {
+        "item": "svg-line-draw-loader",
+        "type": "component",
+        "use": "technique (do NOT install the component)",
+        "why": "It is the registry's seekable GSAP stroke-draw primitive (`stroke-dashoffset` driven from a paused timeline) — exactly the sleep-curve hook. Its own wrapper ships a white card (--surface #fff) that is incompatible with our dark ground, so reuse only the dash technique."
+      },
+      {
+        "item": "per-word-rise",
+        "type": "component",
+        "use": "motion philosophy (do NOT install the component)",
+        "why": "The three tagline lines are a blurred/staggered per-word rise with an overshoot-free settle — its exact behaviour. But it mounts as a fixed 3.5s template with a single whole-stage accent colour and auto-fitted type size, and every instance registers the SAME timeline key 'per-word-rise'. Three instances would collide on that key, auto-size the three lines differently, and could not colour just 'melhor.' yellow. Hand-author the same cascade inside our one root timeline instead."
+      },
+      {
+        "item": "tracking-in",
+        "type": "component",
+        "use": "technique (do NOT install the component)",
+        "why": "The wordmark settle is a precise letter-spacing reveal (0.16em -> -0.02em) with a soft fade — its description and purpose. One tween in the root timeline; no mount needed."
+      },
+      {
+        "item": "drift-hold",
+        "type": "component",
+        "use": "reference only",
+        "why": "Confirms the ambient-hold idea is available if the Builder wants it, but its 'whisper' amplitude is scale 0.006 and it comes with a card + light sweep we do not want. Our final hold is a single yoyo scale of 1.012 — simpler and larger. Do not install."
+      },
+      {
+        "item": "grain-overlay / vignette",
+        "type": "component",
+        "use": "OPTIONAL polish only",
+        "why": "Both verified present in the catalog. Either may be added as a last-layer touch (very low intensity: grain opacity <=0.05, vignette <=0.35) if the frame reads too flat on review. Do not install before the base lockup passes check."
+      }
+    ],
+
+    "hand_authored_layers": [
+      "sleep curve (SVG path + dash draw)",
+      "three event dots + three event labels",
+      "wordmark tracking settle",
+      "three-line tagline stack with per-word cascade and one warmed word",
+      "the global breath during the final hold"
+    ],
+
+    "logo": "assets/nest_routine_logo.png",
+    "tagline": "Entenda o ritmo do seu bebê.",
+    "url": null,
+    "url_note": "No URL exists anywhere in the app repo; `content.url` stays null and the block's URL pill is deleted rather than filled with a placeholder.",
+
+    "tagline_lines": [
+      { "id": "tag-1", "text": "Entenda o ritmo do seu bebê.", "words": ["Entenda", "o", "ritmo", "do", "seu", "bebê."], "color": "#F0EEF6" },
+      { "id": "tag-2", "text": "Preveja o que vem a seguir.", "words": ["Preveja", "o", "que", "vem", "a", "seguir."], "color": "#F0EEF6" },
+      { "id": "tag-3", "text": "Durma melhor.", "words": ["Durma", "melhor."], "color": "#F0EEF6", "accent_word": { "text": "melhor.", "color": "#FFD93D" } }
+    ],
+
+    "event_words": {
+      "Sono": "#9B7ED8",
+      "Mamada": "#E87A5D",
+      "Fralda": "#5DC9B8"
+    },
+
+    "geometry": {
+      "units": "canvas px, absolute, origin top-left of the 1080x1920 frame",
+      "safe_area": {
+        "side_margin_px": 120,
+        "content_x_range": [120, 960],
+        "bottom_clear_px": 260,
+        "content_must_end_above_y": 1660,
+        "all_content_fits_in_y": [380, 1584],
+        "note": "Every key element sits inside x 140..940 and above y=1584, so both the 120px side margin and the 260px bottom clear are respected with room to spare (top clear 380, bottom clear 336)."
+      },
+
+      "background": {
+        "base": { "selector": ".canvas", "background": "#0D0B1E" },
+        "radial_pool": {
+          "type": "div",
+          "left": 90,
+          "top": 130,
+          "w": 900,
+          "h": 900,
+          "opacity": 1,
+          "background": "radial-gradient(circle at 50% 50%, rgba(45,38,84,0.55) 0%, rgba(26,21,51,0.38) 42%, rgba(13,11,30,0) 72%)",
+          "note": "static; fades up only during f0..f15. Centred on the icon centre (540,580). Write rgba(...,0) — never the `transparent` keyword."
+        }
+      },
+
+      "glow_halo": {
+        "selector": ".logo-glow",
+        "left": 120,
+        "top": 160,
+        "w": 840,
+        "h": 840,
+        "center": [540, 580],
+        "background": "radial-gradient(circle at 50% 50%, rgba(155,126,216,0.28) 0%, rgba(124,92,191,0.16) 34%, rgba(13,11,30,0) 70%)",
+        "z_index": 1,
+        "role": "the bloom that melts the logo's baked purple square edges into the navy ground"
+      },
+
+      "icon_tile": {
+        "selector": ".logo-container",
+        "left": 340,
+        "top": 380,
+        "w": 400,
+        "h": 400,
+        "center": [540, 580],
+        "z_index": 2,
+        "img": "assets/nest_routine_logo.png",
+        "border_radius_px": 88,
+        "box_shadow": "0 0 90px rgba(155,126,216,0.30), 0 30px 80px rgba(0,0,0,0.45)",
+        "vertical_position_pct": 30.2
+      },
+
+      "wordmark": {
+        "selector": ".wordmark",
+        "text": "NestRoutine",
+        "left": 120,
+        "top": 856,
+        "w": 840,
+        "text_align": "center",
+        "font_family": "Montserrat",
+        "font_size_px": 92,
+        "font_weight": 700,
+        "letter_spacing_final": "-0.02em",
+        "letter_spacing_start": "0.16em",
+        "color": "#F0EEF6",
+        "line_height": 1.1,
+        "band_y": [856, 957],
+        "gap_from_icon_px": 76
+      },
+
+      "sleep_curve": {
+        "type": "svg",
+        "svg_box": { "left": 0, "top": 0, "w": 1080, "h": 1920, "viewBox": "0 0 1080 1920", "position": "absolute", "inset": 0, "z_index": 3, "pointer_events": "none" },
+        "path_d": "M 140 1156 C 200 1156 240 1052 300 1052 C 380 1052 460 1220 540 1220 C 620 1220 700 1108 780 1108 C 850 1108 890 1144 940 1144",
+        "path_extents": { "x": [140, 940], "y": [1052, 1220] },
+        "meaning": "a damped wave settling to the right — one sleep cycle smoothing out; each extremum has a horizontal tangent so a dot sits cleanly on it",
+        "stroke": "#B8A9E8",
+        "stroke_opacity": 0.8,
+        "stroke_width_px": 5,
+        "stroke_linecap": "round",
+        "fill": "none",
+        "pathLength": 1,
+        "dash_trick": "Set pathLength=\"1\" on the <path> and animate stroke-dasharray=\"1\" with strokeDashoffset 1 -> 0. This makes the draw length-independent (no getTotalLength measurement) and perfectly deterministic. Fallback if pathLength is unreliable in the render browser: measure with getTotalLength() once at setup (the technique used by the registry's `titlecard-lockup` hairline rule) and use that literal.",
+        "css_glow": "filter: drop-shadow(0 0 18px rgba(155,126,216,0.55))",
+        "band_gap_from_wordmark_px": 95
+      },
+
+      "event_dots": [
+        { "id": "dot-sono", "label": "Sono", "color": "#9B7ED8", "center": [300, 1052], "box": { "left": 278, "top": 1030, "w": 44, "h": 44 }, "border_radius": "50%", "box_shadow": "0 0 0 12px rgba(155,126,216,0.10), 0 0 44px rgba(155,126,216,0.55)", "on_curve_extremum": "first crest" },
+        { "id": "dot-mamada", "label": "Mamada", "color": "#E87A5D", "center": [540, 1220], "box": { "left": 518, "top": 1198, "w": 44, "h": 44 }, "border_radius": "50%", "box_shadow": "0 0 0 12px rgba(232,122,93,0.10), 0 0 44px rgba(232,122,93,0.55)", "on_curve_extremum": "trough" },
+        { "id": "dot-fralda", "label": "Fralda", "color": "#5DC9B8", "center": [780, 1108], "box": { "left": 758, "top": 1086, "w": 44, "h": 44 }, "border_radius": "50%", "box_shadow": "0 0 0 12px rgba(93,201,184,0.10), 0 0 44px rgba(93,201,184,0.55)", "on_curve_extremum": "second crest" }
+      ],
+
+      "event_labels": {
+        "row_top_y": 1270,
+        "each": { "w": 280, "h": 44, "text_align": "center", "font_size_px": 34, "font_weight": 700, "letter_spacing": "0.05em" },
+        "positions": [
+          { "id": "lbl-sono", "text": "Sono", "color": "#9B7ED8", "left": 160, "paired_dot": "dot-sono" },
+          { "id": "lbl-mamada", "text": "Mamada", "color": "#E87A5D", "left": 400, "paired_dot": "dot-mamada" },
+          { "id": "lbl-fralda", "text": "Fralda", "color": "#5DC9B8", "left": 640, "paired_dot": "dot-fralda" }
+        ],
+        "note": "one horizontal legend row centred under each dot; each label takes its own event colour. Bottom of the lowest dot (Mamada) is y=1242, so there is a 28px gap to the row. No connector lines — their unequal lengths (196 / 28 / 140 px) would read as an accident."
+      },
+
+      "tagline_stack": {
+        "block": { "left": 120, "top": 1384, "w": 840, "text_align": "center" },
+        "per_line": { "font_family": "Montserrat", "font_size_px": 46, "font_weight": 400, "line_height": 1.45, "color": "#F0EEF6", "letter_spacing": "0.01em" },
+        "lines": [
+          { "id": "tag-1", "top": 1384 },
+          { "id": "tag-2", "top": 1451 },
+          { "id": "tag-3", "top": 1518 }
+        ],
+        "bottom_of_stack_y": 1584,
+        "accent_word": { "line": "tag-3", "word": "melhor.", "color": "#FFD93D", "wrap": "<span style=\"color:#FFD93D\">melhor.</span>", "note": "colour is STATIC (not animated), so there is no risk of a colour pop during the hold" },
+        "fit_check": "line 1 is 28 chars at 46px Montserrat 400 ≈ 720px wide — fits the 840px column with margin; no wrapping allowed."
+      },
+
+      "layout_check": {
+        "stack_order_top_to_bottom": ["background + radial pool", "glow halo", "icon tile", "wordmark", "sleep curve", "event dots", "event labels", "tagline stack"],
+        "z_order": ["background & pool (0)", "glow halo (1)", "icon tile (2)", "sleep curve svg (3)", "dots (4)", "labels (4)", "tagline (4)"],
+        "optical_balance": "content block spans y 380..1584 (1210px tall); top clear 380, bottom clear 336 — slightly above true centre, which is correct for a 9:16 frame."
+      }
+    },
+
+    "frame_map": [
+      { "frame": 0, "t_s": 0.0, "element": "background radial pool", "event": "SETUP + HOOK. Pool fades up 0 -> 1 (f0..f15, power2.out) so frame 0 is deep navy, not flat black.", "readable_until": 300 },
+      { "frame": 0, "t_s": 0.0, "element": "sleep curve", "event": "HOOK. strokeDashoffset 1 -> 0 begins, drawing left-to-right from x=140, power2.out over 45f. Motion is visible on frame 1, before anything is legible.", "readable_until": 300 },
+      { "frame": 12, "t_s": 0.4, "element": "icon tile", "event": "icon begins its rise: opacity 0 -> 1, y +28px -> 0, blur(18px) -> blur(0px), scale 0.94 -> 1, power3.out over 28f. The first 12 frames belong to the curve alone.", "readable_until": 300 },
+      { "frame": 24, "t_s": 0.8, "element": "glow halo", "event": "bloom begins: opacity 0 -> 1, scale 0.55 -> 1.05, power2.out over 24f.", "readable_until": 300 },
+      { "frame": 40, "t_s": 1.333, "element": "icon tile", "event": "ICON LANDS. The tile is fully resolved and never moves again until the global breath. Readable for the remaining 8.7s.", "readable_until": 300 },
+      { "frame": 44, "t_s": 1.467, "element": "wordmark", "event": "wordmark begins its tracking settle: opacity 0 -> 1, y +18px -> 0, blur(10px) -> 0, letter-spacing 0.16em -> -0.02em, power3.out over 16f.", "readable_until": 300 },
+      { "frame": 45, "t_s": 1.5, "element": "sleep curve", "event": "curve draw COMPLETE. The hook line now reads as a full horizon under the icon.", "readable_until": 300 },
+      { "frame": 48, "t_s": 1.6, "element": "glow halo", "event": "bloom PEAK (opacity 1, scale 1.05). Then it decays: f48 -> f96 to opacity 0.62, scale 1.00, power2.out — it never reaches 0, it rests.", "readable_until": 300 },
+      { "frame": 60, "t_s": 2.0, "element": "wordmark", "event": "WORDMARK RESOLVED. Icon + wordmark now form the lockup.", "readable_until": 300 },
+      { "frame": 96, "t_s": 3.2, "element": "dot-sono + lbl-sono", "event": "PATTERN INTERRUPT (the one thing that changes): the curve stops being drawn and starts delivering. Dot 'Sono' #9B7ED8 grows in: scale 0.35 -> 1, opacity 0 -> 1, power2.out over 15f. Its label rises starting f100 (+4f), y +10px -> 0 over 12f. Glow decay also ends here.", "readable_until": 300 },
+      { "frame": 114, "t_s": 3.8, "element": "dot-mamada + lbl-mamada", "event": "second dot 'Mamada' #E87A5D lands on the same rhythm (label starts f118). Dot 1 has been alone for 0.6s — above the 0.3s legibility floor.", "readable_until": 300 },
+      { "frame": 132, "t_s": 4.4, "element": "dot-fralda + lbl-fralda", "event": "third dot 'Fralda' #5DC9B8 lands (label starts f136). Curve + three dots now read as the app's three trackers.", "readable_until": 300 },
+      { "frame": 132, "t_s": 4.4, "element": "(whole frame)", "event": "QUIET BEAT — 132 -> 186 (1.8s) with nothing new entering. Everything on screen holds so the three earned elements can be read. This gap is deliberate; do not fill it.", "readable_until": 300 },
+      { "frame": 186, "t_s": 6.2, "element": "tagline line 1", "event": "'Entenda o ritmo do seu bebê.' — per-word cascade: 6 words, stagger 3f, each word y +14px -> 0, blur(8px) -> 0, opacity 0 -> 1, power2.out over 14f. Last word lands f215.", "readable_until": 300 },
+      { "frame": 204, "t_s": 6.8, "element": "tagline line 2", "event": "'Preveja o que vem a seguir.' — same cascade (6 words). Last word lands f233. Line 1 completed at f215, so it owns 0.37s alone.", "readable_until": 300 },
+      { "frame": 222, "t_s": 7.4, "element": "tagline line 3", "event": "'Durma melhor.' — 2 words cascade (f222 'Durma', f225 'melhor.'); 'melhor.' is STATICALLY #FFD93D. Last word lands f239.", "readable_until": 300 },
+      { "frame": 246, "t_s": 8.2, "element": "lockup group", "event": "SETTLED. The full lockup is composed. Global breath begins: scale 1.000 -> 1.012 over 27f, ease sine.inOut, yoyo:true, repeat:1 — so it returns to exactly 1.000 at f300, no drift, no cut.", "readable_until": 300 },
+      { "frame": 246, "t_s": 8.2, "element": "glow halo", "event": "glow breathes with it: opacity 0.62 -> 0.72 over 27f, sine.inOut, yoyo:true, repeat:1 -> back to 0.62 at f300. This is the ONLY other thing moving after f246.", "readable_until": 300 },
+      { "frame": 300, "t_s": 10.0, "element": "(frame end)", "event": "END. Full lockup held at rest (scale 1.000). NO exit, NO fade-out — the last frame is the complete brand lockup, which is the point of an intro sting.", "readable_until": 300 }
+    ],
+
+    "motion": {
+      "dominant_motif": "ONE shared slow rise-and-settle / breath. The curve draws forward, the icon rises and de-blurs, the wordmark loosens its tracking open, each dot grows, each word lifts — all upward, all decelerating, all on the same eases. The viewer should feel one continuous exhale, not six animations.",
+      "single_pattern_interrupt": "f96 — the curve stops drawing and starts delivering (dots). Nothing else changes state abruptly at any point.",
+      "energy_match": "calm/premium for exhausted parents. No slams, no white flashes, no shake, no overshoot anywhere.",
+      "eases": {
+        "primary": "power2.out",
+        "settle": "power3.out",
+        "ambient": "sine.inOut",
+        "forbidden": ["back.out", "bounce.out", "elastic.out", "expo.out", "steps()"],
+        "forbidden_reason": "any overshoot or restitution reads as playful/aggressive; the brand register is reassuring."
+      },
+      "per_element": {
+        "background_pool": { "primitive": "fade_in", "from": "{opacity:0}", "to": "{opacity:1, duration:0.5, ease:'power2.out'}", "at_frame": 0 },
+        "sleep_curve": { "primitive": "draw-on (stroke dash)", "from": "{strokeDashoffset:1}", "to": "{strokeDashoffset:0, duration:1.5, ease:'power2.out'}", "at_frame": 0, "note": "power2.out puts most of the travel in the first ~0.5s — that is the hook." },
+        "icon_tile": { "primitive": "fade_blur + scale_grow (soft-blur-in)", "from": "{opacity:0, y:28, filter:'blur(18px)', scale:0.94}", "to": "{opacity:1, y:0, filter:'blur(0px)', scale:1, duration:0.933, ease:'power3.out'}", "at_frame": 12, "explicitly_not": "scale_punch / slam / x-slide" },
+        "glow_halo": { "primitive": "glow bloom", "phase_1": "fromTo({opacity:0,scale:0.55},{opacity:1,scale:1.05,duration:0.8,ease:'power2.out'}) at f24", "phase_2": "to({opacity:0.62,scale:1.0,duration:1.6,ease:'power2.out'}) at f48", "note": "it decays to a resting 0.62, never to 0 — ' settles', not 'flashes'" },
+        "wordmark": { "primitive": "tracking-in", "from": "{opacity:0, y:18, filter:'blur(10px)', letterSpacing:'0.16em'}", "to": "{opacity:1, y:0, filter:'blur(0px)', letterSpacing:'-0.02em', duration:0.533, ease:'power3.out'}", "at_frame": 44, "fallback": "if GSAP will not tween letter-spacing in the render build, drop to opacity/y/blur only (the line still reads premium)." },
+        "event_dots": { "primitive": "scale_grow", "from": "{opacity:0, scale:0.35}", "to": "{opacity:1, scale:1, duration:0.5, ease:'power2.out'}", "at_frames": [96, 114, 132], "note": "identical tween per dot — the rhythm, not three different accents, is what makes it read as one family." },
+        "event_labels": { "primitive": "slide_bottom (short)", "from": "{opacity:0, y:10}", "to": "{opacity:1, y:0, duration:0.4, ease:'power2.out'}", "at_frames": [100, 118, 136] },
+        "tagline_lines": { "primitive": "word_reveal (per-word rise, overshoot-free)", "from": "{opacity:0, y:14, filter:'blur(8px)'}", "to": "{opacity:1, y:0, filter:'blur(0px)', duration:0.467, ease:'power2.out', stagger:0.1s-of-3-frames}", "at_frames": [186, 204, 222], "stagger_frames": 3, "word_duration_frames": 14, "explicitly_not": "typewriter, per-letter wave" },
+        "global_breath": { "primitive": "hold_breath", "tween": "to(lockup,{scale:1.012, duration:0.9, ease:'sine.inOut', yoyo:true, repeat:1}) at f246", "glow_tween": "to(halo,{opacity:0.72, duration:0.9, ease:'sine.inOut', yoyo:true, repeat:1}) at f246", "why_yoyo_is_safe": "a yoyo/repeat:1 tween is a pure function of local time, so it is seek-safe and ends exactly where it started at the frame boundary.", "after_f246": "nothing else on screen may move" }
+      },
+      "legibility_audit": {
+        "icon": "f12 -> f300 = 9.6s",
+        "wordmark": "f44 -> f300 = 8.5s",
+        "curve": "f45 -> f300 = 8.5s fully drawn",
+        "dot_1": "alone f96 -> f114 = 0.6s, then to f300",
+        "dot_2": "alone f114 -> f132 = 0.6s, then to f300",
+        "dot_3": "alone f132 -> f186 = 1.8s, then to f300",
+        "tagline_line_1": "alone f215 -> f204 start of L2 overlap-safe; readable f186 -> f300 = 3.8s",
+        "tagline_line_3": "f222 -> f300 = 2.6s with 'melhor.' warmed",
+        "verdict": "every key element is readable far past the 0.3s floor; the tightest interval is the 0.6s dot rhythm (deliberate)."
+      },
+      "implementation": {
+        "single_root": "ONE composition, ONE paused timeline. No sub-compositions, no per-element data-start.",
+        "registration": "const tl = gsap.timeline({paused:true}); ... window.__timelines = window.__timelines || {}; window.__timelines['main'] = tl; tl.seek(0);",
+        "critical_bug_to_fix": "The project's current index.html writes `window.__timelines['main'] = tl;` WITHOUT initialising the object first — that throws if __timelines is undefined. Always write `window.__timelines = window.__timelines || {};` first.",
+        "why_no_child_data_start": "If child divs carry data-start, the runtime owns their visibility and will fight the GSAP opacity tweens (elements popping in at the wrong frame). Put data-start=\"0\" data-duration=\"10\" data-width=\"1080\" data-height=\"1920\" on the ROOT ONLY and let the timeline drive every child.",
+        "class_clip": "keep the composition root classed/timed per project AGENTS.md; do not add class=\"clip\" or data-start to child layers.",
+        "determinism": "No Date.now(), no Math.random(), no network fetches (delete the block's Google Fonts <link>), no waiting on image decode in a way that changes timing. All values are literals; the only measurement permitted is getTotalLength() as a dash fallback.",
+        "seek_safety": "Every animation is a `from`/`fromTo` with explicit literals or a single yoyo repeat, so seeking to any frame N renders identically forwards or backwards. No `.repeat:-1` infinite loops, no rAF-driven state, no CSS keyframe animations running on their own clock."
+      },
+      "css_restrictions": {
+        "mandatory": false,
+        "reason": "This is a CSS/DOM composition with NO shader transitions, so per hyperframes-animation/transitions/overview.md §Shader-Compatible CSS Rules: 'These rules only apply to shader transition compositions. CSS-only compositions have no restrictions.' There is no html2canvas capture here.",
+        "defensive_habits_to_keep_anyway": [
+          "Use rgba(<same colour>,0) instead of the `transparent` keyword in every gradient (avoids dark fringing if anyone later adds a transition).",
+          "No gradient backgrounds on elements thinner than 4px — the sleep curve uses a SOLID stroke colour + a CSS drop-shadow glow instead of a gradient stroke.",
+          "Put literal hex/rgba values in the inline styles of anything critical; do not depend on CSS custom properties resolving at render time.",
+          "Keep `will-change` to the two elements that actually animate transforms (icon tile, lockup group) — do not blanket-apply it, it costs texture memory during render."
+        ]
+      }
+    },
+
+    "typography": {
+      "family": "Montserrat",
+      "why": "compiler-embedded (no network fetch, no lint warning), geometric + premium, and NOT on the banned monoculture list. Verified available weights: 400 / 700 / 900.",
+      "weights": { "wordmark": 700, "event_labels": 700, "tagline": 400 },
+      "fallback": "sans-serif",
+      "guardrail": "Do not use weight 900 on the tagline lines; do not let any line wrap (each line must fit the 840px column)."
+    }
+  },
+
+  "notes_for_design_part2": {
+    "status": "PART 2 COMPLETE — this file is final for the Builder.",
+    "where_the_build_directive_lives": "per this dispatch the reuse directive is nested as content.block / content.customize (the shot-plan-ir example shows them at top level; do not duplicate them — content.* is canonical here).",
+    "category_justification": "logo-reveal: the hero is the real user-supplied NestRoutine launcher icon forming a brand lockup with the wordmark; there is no data, no URL, no page, no chart, no speaker. It runs at the top of the category's range (10s instead of the usual 3-5s) because the user asked for ~10s, so the sting is extended with one brand-motif beat (the sleep curve + three event dots) and a tagline resolve, all still inside the single lockup.",
+    "search_required": false,
+    "search_note": "No web/news/tweet/image search needed — every element is user-supplied (logo) or read from the repo (palette, pt-BR copy).",
+    "catalog_searches_run": [
+      "logo reveal with glow bloom and tagline",
+      "logo sting piece by piece assembly logo outro",
+      "logo brand close wordmark letter cascade tagline",
+      "line draw sweep stroke grows left to right underline",
+      "dots pop in stagger along a line timeline markers",
+      "word by word text reveal soft fade stagger",
+      "soft radial glow bloom halo behind object",
+      "slow breathing scale pulse loop hold still",
+      "vertical 9:16 phone brand intro title",
+      "bare lockup wordmark tagline centered holds still",
+      "vignette grain overlay dark moody polish"
+    ],
+    "catalog_searches_detail": "Searches were run from PROJECT_DIR with Node 22 (`export PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\"`). Every rejected alternative above came out of those results, and no block id is named here that was not returned by a search. `logo-outro`, `per-word-rise`, `soft-blur-in`, `titlecard-lockup` and `drift-hold` were additionally installed into a scratch directory OUTSIDE the project to read their real source before deciding.",
+    "copy_used_from_repo": {
+      "positioning_lines": ["Entenda o ritmo do seu bebê.", "Preveja o que vem a seguir.", "Durma melhor."],
+      "event_words": { "Sono": "#9B7ED8", "Mamada": "#E87A5D", "Fralda": "#5DC9B8" },
+      "source": "lib/utils/strings.dart (copy) and lib/theme/app_colors.dart (colours): sleepPurple 0xFF9B7ED8, feedOrange 0xFFE87A5D, diaperTeal 0xFF5DC9B8, wakeYellow 0xFFFFD93D",
+      "deliberately_unused": ["Registre com um toque", "Notificações no momento certo", "Prevemos quando o bebê vai dormir"],
+      "note": "all copy is pt-BR; picked sparingly so every line has room to breathe and stay legible. Note the copy misuse in `brief` above ('Preveja o vem') is a typo — the authoritative strings are the three lines in content.tagline_lines."
+    }
+  },
+
+  "build_notes": [
+    "REUSE FIRST: run `npx hyperframes add logo-outro` FROM THE PROJECT DIR (Node >= 22: export PATH=\"/opt/homebrew/opt/node@22/bin:$PATH\"), then edit compositions/logo-outro.html IN PLACE per content.customize, OR fold its structure straight into index.html. Do not hand-author from scratch — the reusable part is its full-frame canvas + dedicated glow-bloom layer behind the logo + centred column + paused registered timeline.",
+    "DELETE from the installed block: the 5-path inline logo SVG, the x:1920 slide-in stagger, the back.out(1.7) scale pop, the .url-pill (markup + CSS + tween), and the Inter Google Fonts <link>. The single hardest constraint: NO back.out / bounce.out anywhere in this piece.",
+    "REPLACE the logo motion with one soft-blur-in rise (opacity/y/blur/scale 0.94->1, power3.out, f12->f40) applied to a single <img> of assets/nest_routine_logo.png at its native 400x400, 88px radius, lavender bloom shadow behind it.",
+    "RE-MAP the canvas: metadata, html/body, root data-width/data-height and every coordinate to 1080x1920 — use content.geometry verbatim (it is already portrait). Set root data-duration=\"10\".",
+    "ROOT-ONLY TIMING: data-start/data-duration/data-width/data-height live on the root only. Do NOT put data-start on child layers (the runtime would then fight your GSAP opacity). One paused timeline, tl.seek(0) at the end.",
+    "FIX the existing bug in index.html: write `window.__timelines = window.__timelines || {};` before assigning window.__timelines['main'].",
+    "HAND-AUTHOR these five layers inside the same file (no registry item fits them honestly — see content.secondary_borrowing for why each component was rejected): the sleep curve SVG path + dash draw (pathLength=\"1\" trick), the three event dots + legend row, the wordmark tracking settle, the three-line per-word tagline cascade, and the yoyo breath.",
+    "The last word of line 3 ('melhor.') is statically #FFD93D — do not animate its colour.",
+    "Nothing fades out at the end: frame 300 must show the complete, at-rest lockup (global breath returns to scale 1.000 exactly).",
+    "DETERMINISM: no Date.now(), no Math.random(), no network fetch. Every value literal.",
+    "VERIFY with `npm run check` (lint + runtime + layout + motion + contrast) before rendering. Watch specifically for: contrast on the three event labels against #0D0B1E, the 46px tagline lines fitting the 840px column without wrapping, and any lint complaint about missing class=\"clip\".",
+    "RISKS TO WATCH — (1) the logo is fully opaque with a baked purple square: any attempt at a cutout, mask reveal or blend mode will look broken; the bloom halo is what makes the square edges acceptable, so do not delete or weaken it. (2) Do not upscale the 400x400 PNG; render it at exactly 400x400 or it softens. (3) Three cores norms apart: if the dots read as a row of lollipops rather than points on the curve, check that each dot centre really sits on the path extrema (tangent is horizontal at those three points by construction). (4) If GSAP refuses to tween letter-spacing in this build, drop that one property rather than fight it. (5) Optional grain-overlay / vignette may be added only if the review says the frame is too flat — at opacity <=0.05 and <=0.35 respectively."
+  ]
+}

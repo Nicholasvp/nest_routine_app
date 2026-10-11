@@ -1,0 +1,107 @@
+{
+  "category": "webpage",
+  "duration_s": 10,
+  "fps": 30,
+  "canvas": { "w": 1080, "h": 1920, "aspect": "9:16" },
+  "style": "Calm-premium dark product demo for NestRoutine, a baby-routine app. One continuous vertical 'breath' on deep navy: nothing slams, every element rises/settles on the same slow easing family. A single phone holds real app screenshots while iOS-style push notifications drop onto it, stacked one after another — the notifications ARE the story, so they own the frame for most of the runtime. Appeal: tired new/expecting parents — gentle, quiet, reassuring. No narration, no cuts, no store badge, no URL. All copy in English.",
+  "palette": [
+    "#0D0B1E",
+    "#1A1533",
+    "#2D2654",
+    "#1E1A3A",
+    "#B8A9E8",
+    "#9B7ED8",
+    "#7C5CBF",
+    "#FFD93D",
+    "#E87A5D",
+    "#5DC9B8",
+    "#F0EEF6",
+    "#9892B5"
+  ],
+  "font": "Montserrat",
+  "beats": [0, 48, 66, 108, 123, 150, 162, 186, 222, 243, 300],
+  "export": "mp4",
+  "asset_needs": [
+    {
+      "role": "hero",
+      "kind": "image",
+      "source": "assets/screenshots/home.png",
+      "treatment": "none",
+      "note": "1206x2622 device screenshot of the app Home screen, copied from the repo's assets/screenshots. Shown whole inside the phone frame (exact 0.4599 aspect, no crop)."
+    },
+    {
+      "role": "screen-sleep",
+      "kind": "image",
+      "source": "assets/screenshots/sleep.png",
+      "treatment": "none",
+      "note": "Sleep-tracking screen. Cross-fades in over the Home screen when the 15-minute nap reminder lands, so the notification and the screen it opens belong together."
+    },
+    {
+      "role": "screen-feed",
+      "kind": "image",
+      "source": "assets/screenshots/feed.png",
+      "treatment": "none",
+      "note": "Breastfeeding / feeding tracker screen. Second cross-fade, ties the Feeding chip to a real screen."
+    },
+    {
+      "role": "screen-diaper",
+      "kind": "image",
+      "source": "assets/screenshots/diaper.png",
+      "treatment": "none",
+      "note": "Diaper tracker screen. Third cross-fade, ties the Diaper chip to a real screen."
+    },
+    {
+      "role": "badge",
+      "kind": "logo",
+      "source": "assets/nest_routine_logo.png",
+      "treatment": "none",
+      "note": "400x400 app launcher icon with its own baked purple gradient square (no transparency). Used at 64x64 as the notification app badge, and at 96x96 for the final wordmark lockup — never cut out."
+    }
+  ],
+  "brief": "A phone breathes up out of deep navy holding the NestRoutine Home screen. Before any copy is legible, the first real push notification drops onto it: 'Nap time!' — 'Baby may need to sleep in 15 minutes' — and the screen beneath cross-fades to the Sleep tracker, so you see where the reminder leads. That card lifts away and the second signature alert drops into the same slot in warm amber: 'Sleep window closing!' — 'Baby may get overtired. Put baby down now.' While it holds, the three things the app tracks arrive as coloured chips under the phone — Sleep (lavender), Feeding (terracotta), Diaper (teal) — each one swapping a real screenshot into the phone as it lands. The cards lift, everything settles, and the app icon + wordmark resolve over the line 'Never miss the sleep window.' One dominant motion idea: every element enters with the same slow rise-and-settle (or drop-and-settle) easing, so drop-in, cross-fade, chips and lockup read as one continuous exhale rather than five separate animations.",
+  "content": {
+    "url": null,
+    "capture": "local app screenshots (no capture step — user-supplied)",
+    "ui": {
+      "device": "phone frame 620x1348 at (230, 180), radius 66, lavender rim + deep shadow",
+      "screens": [
+        { "asset": "assets/screenshots/home.png", "from": 0, "to": 2.2 },
+        { "asset": "assets/screenshots/sleep.png", "from": 2.2, "to": 5.0 },
+        { "asset": "assets/screenshots/feed.png", "from": 5.0, "to": 6.2 },
+        { "asset": "assets/screenshots/diaper.png", "from": 6.2, "to": 10 }
+      ]
+    },
+    "highlights": [
+      {
+        "region": "notification slot (246,150) 588x240",
+        "label": "Nap time!",
+        "body": "Baby may need to sleep in 15 minutes",
+        "accent": "#9B7ED8",
+        "glyph": "moon",
+        "start": 1.6,
+        "end": 3.6
+      },
+      {
+        "region": "notification slot (246,150) 588x240",
+        "label": "Sleep window closing!",
+        "body": "Baby may get overtired. Put baby down now.",
+        "accent": "#FFD93D",
+        "glyph": "warning",
+        "start": 4.1,
+        "end": 7.4
+      },
+      {
+        "region": "tracker chips row (top 1572)",
+        "labels": ["Sleep", "Feeding", "Diaper"],
+        "colors": ["#9B7ED8", "#E87A5D", "#5DC9B8"],
+        "start": 5.4
+      },
+      {
+        "region": "lockup (top 1716) + tagline (top 1832)",
+        "label": "NestRoutine",
+        "tagline": "Never miss the sleep window.",
+        "start": 8.1
+      }
+    ]
+  }
+}

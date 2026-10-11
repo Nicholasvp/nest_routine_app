@@ -1,0 +1,522 @@
+<!doctype html>
+<!-- nestroutine-notifications — 10s vertical product demo.
+     Structure: one full-frame canvas + registered paused GSAP timeline; all motion is
+     authored here from shot-plan.json's frame beats (scaled to seconds at 30fps). -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>NestRoutine — Notifications</title>
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0d0b1e;
+      }
+
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .canvas {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        background: #0d0b1e;
+        font-family: "Montserrat", sans-serif;
+        color: #f0eef6;
+      }
+
+      /* ── ground: two soft pools so frame 0 is deep navy, never flat black ── */
+      .bg-pool {
+        position: absolute;
+        left: 40px;
+        top: 90px;
+        width: 1000px;
+        height: 1100px;
+        opacity: 0;
+        background: radial-gradient(
+          circle at 50% 40%,
+          rgba(45, 38, 84, 0.62) 0%,
+          rgba(26, 21, 51, 0.45) 44%,
+          rgba(13, 11, 30, 0) 74%
+        );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .phone-glow {
+        position: absolute;
+        left: 130px;
+        top: 220px;
+        width: 820px;
+        height: 1140px;
+        opacity: 0;
+        background: radial-gradient(
+          circle at 50% 50%,
+          rgba(124, 92, 191, 0.3) 0%,
+          rgba(124, 92, 191, 0.14) 42%,
+          rgba(13, 11, 30, 0) 72%
+        );
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      /* ── device: 620 x 1348 keeps the 1206x2622 screenshots pixel-exact ── */
+      .phone {
+        position: absolute;
+        left: 228px;
+        top: 180px;
+        width: 624px;
+        height: 1352px;
+        border-radius: 70px;
+        overflow: hidden;
+        opacity: 0;
+        background: #12102a;
+        border: 2px solid rgba(184, 169, 232, 0.16);
+        box-shadow: 0 40px 110px rgba(0, 0, 0, 0.55), 0 0 90px rgba(124, 92, 191, 0.22);
+        z-index: 2;
+      }
+
+      .screen {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        border-radius: 66px;
+        background: #0d0b1e;
+      }
+
+      .shot {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 620px;
+        height: 1348px;
+        display: block;
+        opacity: 0;
+      }
+
+      #screen-home {
+        opacity: 1;
+      }
+
+      .sheen {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          152deg,
+          rgba(255, 255, 255, 0.07) 0%,
+          rgba(255, 255, 255, 0) 38%,
+          rgba(13, 11, 30, 0.16) 100%
+        );
+        pointer-events: none;
+      }
+
+      /* ── push notifications: one shared slot, two cards ── */
+      .notif {
+        position: absolute;
+        left: 246px;
+        top: 150px;
+        width: 588px;
+        height: 260px;
+        border-radius: 46px;
+        opacity: 0;
+        background: linear-gradient(180deg, #262247 0%, #1b1836 100%);
+        border: 1px solid rgba(184, 169, 232, 0.2);
+        box-shadow: 0 26px 64px rgba(0, 0, 0, 0.6);
+        z-index: 4;
+      }
+
+      .n-ring {
+        position: absolute;
+        inset: -14px;
+        border-radius: 60px;
+        opacity: 0;
+        border: 2px solid var(--accent);
+        pointer-events: none;
+      }
+
+      .n-bar {
+        position: absolute;
+        left: 14px;
+        top: 40px;
+        width: 8px;
+        height: 180px;
+        border-radius: 4px;
+        background: var(--accent);
+        opacity: 0.9;
+      }
+
+      .n-icon {
+        position: absolute;
+        left: 40px;
+        top: 32px;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: var(--accent-soft);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .n-icon img {
+        display: block;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+      }
+
+      /* device event screenshots are the only <img> nodes so media stays discoverable;
+         the repeated brand marks below are backgrounds (no duplicate discovery) */
+      .n-icon-fill {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background-image: url("assets/nest_routine_logo.png");
+        background-size: 64px 64px;
+        background-repeat: no-repeat;
+      }
+
+      .n-app {
+        position: absolute;
+        left: 120px;
+        top: 38px;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #9892b5;
+        white-space: nowrap;
+      }
+
+      .n-time {
+        position: absolute;
+        right: 32px;
+        top: 38px;
+        font-size: 22px;
+        font-weight: 500;
+        color: #9892b5;
+        white-space: nowrap;
+      }
+
+      .n-title {
+        position: absolute;
+        left: 120px;
+        top: 74px;
+        width: 436px;
+        font-size: 38px;
+        font-weight: 700;
+        line-height: 1.16;
+        letter-spacing: -0.01em;
+        color: #f0eef6;
+      }
+
+      .n-body {
+        position: absolute;
+        left: 120px;
+        top: 152px;
+        width: 436px;
+        font-size: 29px;
+        font-weight: 500;
+        line-height: 1.3;
+        color: #c6bee2;
+      }
+
+      #card2 .n-title {
+        font-size: 33px;
+        top: 78px;
+      }
+
+      .hl {
+        color: #b8a9e8;
+        font-weight: 700;
+      }
+
+      /* ── tracker chips: the three things the app logs ── */
+      .chips {
+        position: absolute;
+        left: 60px;
+        top: 1572px;
+        width: 960px;
+        height: 96px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        z-index: 3;
+      }
+
+      .chip {
+        width: 304px;
+        height: 96px;
+        border-radius: 48px;
+        opacity: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: rgba(45, 38, 84, 0.62);
+        border: 1px solid rgba(184, 169, 232, 0.16);
+      }
+
+      .chip-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+      }
+
+      .chip-label {
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+      }
+
+      /* ── closing lockup ── */
+      .lockup {
+        position: absolute;
+        left: 0;
+        top: 1716px;
+        width: 1080px;
+        text-align: center;
+        z-index: 3;
+      }
+
+      .lock-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 26px;
+      }
+
+      .lock-tile {
+        width: 96px;
+        height: 96px;
+        border-radius: 26px;
+        overflow: hidden;
+        opacity: 0;
+        background-image: url("assets/nest_routine_logo.png");
+        background-size: 96px 96px;
+        background-repeat: no-repeat;
+        box-shadow: 0 0 60px rgba(124, 92, 191, 0.4), 0 18px 40px rgba(0, 0, 0, 0.45);
+      }
+
+      .lock-tile img,
+      .lock-tile span.sr {
+        display: none;
+      }
+
+      .wordmark {
+        font-size: 76px;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: #f0eef6;
+        white-space: nowrap;
+        opacity: 0;
+      }
+
+      .tagline {
+        position: absolute;
+        left: 0;
+        top: 1832px;
+        width: 1080px;
+        text-align: center;
+        font-size: 36px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: #b8a9e8;
+        white-space: nowrap;
+        opacity: 0;
+        z-index: 3;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="10"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div class="canvas clip" id="frame">
+        <div class="bg-pool" id="bg-pool"></div>
+        <div class="phone-glow" id="phone-glow"></div>
+
+        <div class="phone" id="phone">
+          <div class="screen">
+            <img class="shot" id="screen-home" src="assets/screenshots/home.png" alt="" />
+            <img class="shot" id="screen-sleep" src="assets/screenshots/sleep.png" alt="" />
+            <img class="shot" id="screen-feed" src="assets/screenshots/feed.png" alt="" />
+            <img class="shot" id="screen-diaper" src="assets/screenshots/diaper.png" alt="" />
+            <div class="sheen"></div>
+          </div>
+        </div>
+
+        <!-- card 1 — the 15-minute head start -->
+        <div class="notif" id="card1" style="--accent: #9b7ed8; --accent-soft: rgba(155, 126, 216, 0.16)">
+          <div class="n-bar"></div>
+          <div class="n-icon">
+            <img src="assets/nest_routine_logo.png" alt="" />
+          </div>
+          <div class="n-app">NestRoutine</div>
+          <div class="n-time">6:45 PM</div>
+          <div class="n-title">Nap time!</div>
+          <div class="n-body">Baby may need to sleep in <span class="hl">15 minutes</span></div>
+        </div>
+
+        <!-- card 2 — the closing sleep window -->
+        <div class="notif" id="card2" style="--accent: #ffd93d; --accent-soft: rgba(255, 217, 61, 0.18)">
+          <div class="n-ring"></div>
+          <div class="n-bar"></div>
+          <div class="n-icon">
+            <div class="n-icon-fill"></div>
+          </div>
+          <div class="n-app">NestRoutine</div>
+          <div class="n-time">7:02 PM</div>
+          <div class="n-title">Sleep window closing!</div>
+          <div class="n-body">Baby may get overtired. <span class="hl">Put baby down now.</span></div>
+        </div>
+
+        <div class="chips" id="chips">
+          <div class="chip">
+            <span class="chip-dot" style="background: #9b7ed8"></span>
+            <span class="chip-label" style="color: #b8a9e8">Sleep</span>
+          </div>
+          <div class="chip">
+            <span class="chip-dot" style="background: #e87a5d"></span>
+            <span class="chip-label" style="color: #e87a5d">Feeding</span>
+          </div>
+          <div class="chip">
+            <span class="chip-dot" style="background: #5dc9b8"></span>
+            <span class="chip-label" style="color: #5dc9b8">Diaper</span>
+          </div>
+        </div>
+
+        <div class="lockup" id="lockup">
+          <div class="lock-row">
+            <div class="lock-tile" id="lock-tile"></div>
+            <div class="wordmark" id="wordmark">NestRoutine</div>
+          </div>
+        </div>
+
+        <div class="tagline" id="tagline">
+          Never miss the <span style="color: #f0eef6">sleep window.</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+
+        // 0.00 — the ground breathes up before anything is legible
+        tl.fromTo("#bg-pool", { opacity: 0 }, { opacity: 1, duration: 1.2, ease: "power2.out" }, 0);
+
+        // 0.10 — device rises out of blur and settles; glow blooms behind it
+        tl.fromTo(
+          "#phone",
+          { opacity: 0, y: 56, scale: 0.955, filter: "blur(16px)" },
+          { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", duration: 1.5, ease: "power3.out" },
+          0.1,
+        );
+        tl.fromTo(
+          "#phone-glow",
+          { opacity: 0, scale: 0.8 },
+          { opacity: 0.9, scale: 1, duration: 1.8, ease: "power2.out" },
+          0.1,
+        );
+
+        // 1.60 — signature alert 1 drops onto the screen and holds
+        tl.fromTo(
+          "#card1",
+          { opacity: 0, y: -150, scale: 0.96 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.75, ease: "back.out(1.5)" },
+          1.6,
+        );
+
+        // 2.20 — where the reminder leads: Home cross-fades to the Sleep tracker
+        tl.to("#screen-home", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 2.2);
+        tl.fromTo("#screen-sleep", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.inOut" }, 2.2);
+
+        // 3.60 — card 1 lifts away, clearing the slot
+        tl.to("#card1", { opacity: 0, y: -120, scale: 0.97, duration: 0.5, ease: "power2.in" }, 3.6);
+
+        // 4.10 — signature alert 2 drops into the same slot, warm amber, with a pulse
+        tl.fromTo(
+          "#card2",
+          { opacity: 0, y: -150, scale: 0.96 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.75, ease: "back.out(1.5)" },
+          4.1,
+        );
+        tl.fromTo(
+          "#card2 .n-ring",
+          { opacity: 0.5, scale: 1 },
+          { opacity: 0, scale: 1.16, duration: 1, ease: "power2.out", repeat: 2 },
+          4.9,
+        );
+
+        // 5.00 / 6.20 — the Feeding and Diaper trackers swap into the device
+        tl.to("#screen-sleep", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 5.0);
+        tl.fromTo("#screen-feed", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.inOut" }, 5.0);
+        tl.to("#screen-feed", { opacity: 0, duration: 0.45, ease: "power2.inOut" }, 6.2);
+        tl.fromTo("#screen-diaper", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.inOut" }, 6.2);
+
+        // 5.40 — the three things it logs arrive under the device
+        tl.fromTo(
+          "#chips .chip",
+          { opacity: 0, y: 26 },
+          { opacity: 1, y: 0, duration: 0.55, ease: "power2.out", stagger: 0.14 },
+          5.4,
+        );
+
+        // 7.40 — card 2 lifts away; the frame goes quiet
+        tl.to("#card2", { opacity: 0, y: -120, scale: 0.97, duration: 0.5, ease: "power2.in" }, 7.4);
+
+        // 8.10 — icon + wordmark settle in, then the line lands
+        tl.fromTo(
+          ["#lock-tile", "#wordmark"],
+          { opacity: 0, y: 22, filter: "blur(10px)" },
+          {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 0.6,
+            ease: "power3.out",
+            stagger: 0.12,
+          },
+          8.1,
+        );
+        tl.fromTo(
+          "#tagline",
+          { opacity: 0, y: 18, filter: "blur(8px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "power3.out" },
+          8.6,
+        );
+
+        // 9.20 -> 10.00 — still hold; nothing else moves
+
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

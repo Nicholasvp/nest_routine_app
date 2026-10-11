@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 
+enum SocialProvider { google, apple }
+
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -77,6 +79,46 @@ class AuthProvider extends ChangeNotifier {
     }
     _user = null;
     notifyListeners();
+  }
+
+  /// Google / Apple sign in.
+  ///
+  /// Google opens an external browser, so success arrives later through
+  /// [authStateChanges]. [error] stays null while the flow is pending and the
+  /// caller should not show a failure dialog unless it returns false.
+  Future<bool> signInWithProvider(SocialProvider provider) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      switch (provider) {
+        case SocialProvider.google:
+          await _authService.signInWithGoogle();
+        case SocialProvider.apple:
+          final response = await _authService.signInWithApple();
+          _user = response.user ?? response.session?.user;
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _error = e.message;
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      if (_authService.isAppleCancellation(e)) {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+      debugPrint('[AuthProvider] ${provider.name} signIn error: $e');
+      _error = 'An unexpected error occurred';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   void clearError() {

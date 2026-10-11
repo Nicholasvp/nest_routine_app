@@ -278,6 +278,10 @@ class Strings {
   String get loginAccountCreated => get('Account created! Check your email for verification.', 'Conta criada! Verifique seu email para confirmar.');
   String get loginSyncInfo => get('Your data will be synced to the cloud', 'Seus dados serão sincronizados na nuvem');
   String get loginUnexpectedError => get('An unexpected error occurred', 'Ocorreu um erro inesperado');
+  String get loginContinueGoogle => get('Continue with Google', 'Continuar com Google');
+  String get loginContinueApple => get('Continue with Apple', 'Continuar com Apple');
+  String get loginOrDivider => get('or', 'ou');
+  String get loginSocialUnavailable => get('This sign-in method is not available yet', 'Esse método de login ainda não está disponível');
 
   // ── Analytics ──
   String get analytics => get('Analytics', 'Análises');

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
 import '../services/analytics_service.dart';
@@ -19,6 +21,35 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLogin = true;
   bool _obscurePassword = true;
+  SocialProvider? _pendingProvider;
+
+  Future<void> _signInWithSocial(SocialProvider provider) async {
+    final authProvider = context.read<AuthProvider>();
+
+    setState(() => _pendingProvider = provider);
+    final submitted = await authProvider.signInWithProvider(provider);
+
+    if (!mounted) return;
+    setState(() => _pendingProvider = null);
+
+    if (submitted && authProvider.isLoggedIn) {
+      AnalyticsService(authProvider.authService).log(
+        AnalyticsService.login,
+        AnalyticsService.engagement,
+      );
+      return;
+    }
+
+    final error = authProvider.error;
+    if (error == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -201,6 +232,46 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider(color: AppColors.cardBorder)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          strings.loginOrDivider,
+                          style: const TextStyle(
+                            color: AppColors.textTertiary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const Expanded(child: Divider(color: AppColors.cardBorder)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _SocialButton(
+                    label: strings.loginContinueGoogle,
+                    loading: authProvider.isLoading &&
+                        _pendingProvider == SocialProvider.google,
+                    onPressed: () => _signInWithSocial(SocialProvider.google),
+                    logo: SvgPicture.asset(
+                      'assets/google_g_logo.svg',
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SocialButton(
+                    label: strings.loginContinueApple,
+                    loading: authProvider.isLoading &&
+                        _pendingProvider == SocialProvider.apple,
+                    onPressed: () => _signInWithSocial(SocialProvider.apple),
+                    logo: CustomPaint(
+                      size: const Size(20, 20),
+                      painter: const AppleLogoPainter(color: Colors.black),
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   Text(
                     strings.loginSyncInfo,
@@ -214,6 +285,58 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  const _SocialButton({
+    required this.label,
+    required this.logo,
+    required this.onPressed,
+    required this.loading,
+  });
+
+  final String label;
+  final Widget logo;
+  final VoidCallback onPressed;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: loading ? null : onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          side: const BorderSide(color: AppColors.cardBorder),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: loading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(alignment: Alignment.centerLeft, child: logo),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

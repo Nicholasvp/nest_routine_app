@@ -34,14 +34,35 @@ class BabyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pushes any babies created while offline to the cloud, then pulls the
+  /// cloud down and unions the two so local-only babies are never dropped.
   Future<void> loadBabiesFromCloud() async {
     if (_syncService == null || !_syncService!.isLoggedIn) return;
-    final cloudBabies = await _syncService!.loadBabiesFromSupabase();
-    if (cloudBabies.isNotEmpty) {
-      _babies = cloudBabies;
-      await StorageService.saveBabies(_babies);
-      notifyListeners();
+
+    final userId = _syncService!.userId;
+    if (userId != null) {
+      await _syncService!.migrateLocalDataToCloud(userId);
     }
+
+    final cloudBabies = await _syncService!.loadBabiesFromSupabase();
+    if (cloudBabies.isEmpty) return;
+
+    _babies = _mergeBabies(StorageService.loadBabies(), cloudBabies);
+    if (_currentIndex >= _babies.length) {
+      _currentIndex = _babies.isEmpty ? 0 : _babies.length - 1;
+    }
+    await StorageService.saveBabies(_babies);
+    notifyListeners();
+  }
+
+  /// Union by id: the cloud is authoritative for babies that exist in both,
+  /// while babies that only exist locally are kept.
+  List<Baby> _mergeBabies(List<Baby> local, List<Baby> cloud) {
+    if (local.isEmpty) return cloud;
+    final pending = local
+        .where((localBaby) => cloud.every((c) => c.id != localBaby.id))
+        .toList();
+    return [...cloud, ...pending]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
   Future<void> addBaby(String name, DateTime dateOfBirth, {String? photoPath}) async {

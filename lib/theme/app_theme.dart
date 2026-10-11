@@ -1,10 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 class AppTheme {
   AppTheme._();
 
+  static const String fontFamily = 'Inter';
+
+  static const TextTheme _baseTextTheme = TextTheme(
+    displayLarge: TextStyle(
+      fontSize: 34,
+      fontWeight: FontWeight.w800,
+      color: AppColors.textPrimary,
+      letterSpacing: -0.5,
+    ),
+    displayMedium: TextStyle(
+      fontSize: 28,
+      fontWeight: FontWeight.w700,
+      color: AppColors.textPrimary,
+    ),
+    headlineLarge: TextStyle(
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      color: AppColors.textPrimary,
+    ),
+    headlineMedium: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textPrimary,
+    ),
+    titleLarge: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textPrimary,
+    ),
+    titleMedium: TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w500,
+      color: AppColors.textPrimary,
+    ),
+    bodyLarge: TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w400,
+      color: AppColors.textPrimary,
+    ),
+    bodyMedium: TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: AppColors.textSecondary,
+    ),
+    bodySmall: TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+      color: AppColors.textTertiary,
+      letterSpacing: 0.5,
+    ),
+    labelLarge: TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: AppColors.textPrimary,
+    ),
+    labelSmall: TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      color: AppColors.textTertiary,
+      letterSpacing: 0.5,
+    ),
+  );
+
   static ThemeData get darkTheme {
+    final textTheme = GoogleFonts.interTextTheme(_baseTextTheme);
+
     return ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.deepNavy,
@@ -14,77 +80,8 @@ class AppTheme {
         surface: AppColors.darkPurple,
         error: AppColors.error,
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontFamily: 'SF Pro Display',
-          fontSize: 34,
-          fontWeight: FontWeight.w800,
-          color: AppColors.textPrimary,
-          letterSpacing: -0.5,
-        ),
-        displayMedium: TextStyle(
-          fontFamily: 'SF Pro Display',
-          fontSize: 28,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-        headlineLarge: TextStyle(
-          fontFamily: 'SF Pro Display',
-          fontSize: 24,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-        headlineMedium: TextStyle(
-          fontFamily: 'SF Pro Display',
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        titleLarge: TextStyle(
-          fontFamily: 'SF Pro Display',
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        titleMedium: TextStyle(
-          fontFamily: 'SF Pro Display',
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
-        ),
-        bodyLarge: TextStyle(
-          fontFamily: 'SF Pro Text',
-          fontSize: 16,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textPrimary,
-        ),
-        bodyMedium: TextStyle(
-          fontFamily: 'SF Pro Text',
-          fontSize: 14,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textSecondary,
-        ),
-        bodySmall: TextStyle(
-          fontFamily: 'SF Pro Text',
-          fontSize: 12,
-          fontWeight: FontWeight.w400,
-          color: AppColors.textTertiary,
-          letterSpacing: 0.5,
-        ),
-        labelLarge: TextStyle(
-          fontFamily: 'SF Pro Text',
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
-        ),
-        labelSmall: TextStyle(
-          fontFamily: 'SF Pro Text',
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-          color: AppColors.textTertiary,
-          letterSpacing: 0.5,
-        ),
-      ),
+      textTheme: textTheme,
+      primaryTextTheme: textTheme,
       cardTheme: CardThemeData(
         color: AppColors.cardDark,
         elevation: 0,
@@ -108,7 +105,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.cardDark,
-        contentTextStyle: const TextStyle(color: AppColors.textPrimary),
+        contentTextStyle: GoogleFonts.inter(color: AppColors.textPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
       ),
@@ -116,12 +113,11 @@ class AppTheme {
         color: AppColors.cardBorder,
         thickness: 0.5,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
-          fontFamily: 'SF Pro Display',
+        titleTextStyle: GoogleFonts.inter(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
@@ -146,8 +142,9 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.sleepPurple),
         ),
-        labelStyle: const TextStyle(color: AppColors.textSecondary),
-        hintStyle: const TextStyle(color: AppColors.textTertiary),
+        labelStyle: GoogleFonts.inter(color: AppColors.textSecondary),
+        hintStyle: GoogleFonts.inter(color: AppColors.textTertiary),
       ),
     );
-  }}
+  }
+}

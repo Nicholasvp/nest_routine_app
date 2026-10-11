@@ -33,6 +33,19 @@ class StorageService {
     await _settingsBox.put('locale', code);
   }
 
+  static const String _localDataMigratedKey = 'local_data_migrated';
+
+  static String _migratedKeyFor(String userId) => '$_localDataMigratedKey.$userId';
+
+  /// True once the offline-created data for [userId] has been pushed to the
+  /// cloud. Guarantees the migration only ever runs once per user.
+  static bool isLocalDataMigrated(String userId) =>
+      _settingsBox.get(_migratedKeyFor(userId), defaultValue: false) as bool;
+
+  static Future<void> setLocalDataMigrated(String userId) async {
+    await _settingsBox.put(_migratedKeyFor(userId), true);
+  }
+
   static List<Baby> loadBabies() {
     final data = _babiesBox.get('all');
     if (data == null) return [];

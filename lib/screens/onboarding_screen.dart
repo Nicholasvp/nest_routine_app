@@ -10,6 +10,7 @@ import '../services/meta_ads_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/storage_service.dart';
 import '../utils/strings.dart';
+import '../widgets/language_picker.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -481,39 +482,7 @@ class _LanguageSelector extends StatelessWidget {
   }
 
   void _showLanguagePicker(BuildContext context, LocaleProvider localeProvider) {
-    final strings = context.read<LocaleProvider>().strings;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(strings.language),
-        content: RadioGroup<bool>(
-          groupValue: localeProvider.isPortuguese,
-          onChanged: (bool? isPortuguese) {
-            localeProvider.setLocale(isPortuguese == true ? 'pt' : 'en');
-            Navigator.pop(ctx);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(strings.english),
-                leading: const Radio<bool>(
-                  value: false,
-                  activeColor: AppColors.sleepPurple,
-                ),
-              ),
-              ListTile(
-                title: Text(strings.portuguese),
-                leading: const Radio<bool>(
-                  value: true,
-                  activeColor: AppColors.sleepPurple,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showLanguagePicker(context, localeProvider);
   }
 }
 

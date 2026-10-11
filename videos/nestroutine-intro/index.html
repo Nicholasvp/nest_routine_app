@@ -1,0 +1,454 @@
+<!doctype html>
+<!-- nestroutine-intro — structure reused from registry block logo-outro (full-frame canvas + dedicated glow layer behind the logo + centred column + one paused registered timeline). Re-styled to 1080x1920; all motion rebuilt from shot-plan frame_map. -->
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>NestRoutine — Intro</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #0d0b1e;
+      }
+
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      /* structure kept from logo-outro: full-frame absolute canvas with overflow hidden */
+      .canvas {
+        position: absolute;
+        inset: 0;
+        width: 1080px;
+        height: 1920px;
+        background: #0d0b1e;
+        position: relative;
+        overflow: hidden;
+        font-family: Montserrat, sans-serif;
+        color: #f0eef6;
+      }
+
+      /* static radial pool behind everything */
+      .bg-pool {
+        position: absolute;
+        left: 90px;
+        top: 130px;
+        width: 900px;
+        height: 900px;
+        opacity: 0;
+        background: radial-gradient(
+          circle at 50% 50%,
+          rgba(45, 38, 84, 0.55) 0%,
+          rgba(26, 21, 51, 0.38) 42%,
+          rgba(13, 11, 30, 0) 72%
+        );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* structure kept from logo-outro: dedicated glow layer BEHIND the logo */
+      .logo-glow {
+        position: absolute;
+        left: 120px;
+        top: 160px;
+        width: 840px;
+        height: 840px;
+        border-radius: 50%;
+        opacity: 0;
+        background: radial-gradient(
+          circle at 50% 50%,
+          rgba(155, 126, 216, 0.28) 0%,
+          rgba(124, 92, 191, 0.16) 34%,
+          rgba(13, 11, 30, 0) 70%
+        );
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      #lockup {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        transform-origin: 540px 982px;
+        will-change: transform;
+      }
+
+      .logo-container {
+        position: absolute;
+        left: 340px;
+        top: 380px;
+        width: 400px;
+        height: 400px;
+        border-radius: 88px;
+        overflow: hidden;
+        opacity: 0;
+        box-shadow: 0 0 90px rgba(155, 126, 216, 0.3), 0 30px 80px rgba(0, 0, 0, 0.45);
+        will-change: transform, opacity, filter;
+        z-index: 2;
+      }
+
+      .logo-container img {
+        display: block;
+        width: 400px;
+        height: 400px;
+        border-radius: 88px;
+      }
+
+      .wordmark {
+        position: absolute;
+        left: 120px;
+        top: 856px;
+        width: 840px;
+        text-align: center;
+        font-family: Montserrat, sans-serif;
+        font-size: 92px;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        color: #f0eef6;
+        white-space: nowrap;
+        opacity: 0;
+        z-index: 2;
+      }
+
+      .sleep-curve {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 3;
+      }
+
+      #sleep-curve-path {
+        filter: drop-shadow(0 0 18px rgba(155, 126, 216, 0.55));
+      }
+
+      .dot {
+        position: absolute;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        opacity: 0;
+        z-index: 4;
+      }
+
+      #dot-sono {
+        left: 278px;
+        top: 1030px;
+        background: #9b7ed8;
+        box-shadow: 0 0 0 12px rgba(155, 126, 216, 0.1), 0 0 44px rgba(155, 126, 216, 0.55);
+      }
+
+      #dot-mamada {
+        left: 518px;
+        top: 1198px;
+        background: #e87a5d;
+        box-shadow: 0 0 0 12px rgba(232, 122, 93, 0.1), 0 0 44px rgba(232, 122, 93, 0.55);
+      }
+
+      #dot-fralda {
+        left: 758px;
+        top: 1086px;
+        background: #5dc9b8;
+        box-shadow: 0 0 0 12px rgba(93, 201, 184, 0.1), 0 0 44px rgba(93, 201, 184, 0.55);
+      }
+
+      .event-label {
+        position: absolute;
+        top: 1270px;
+        width: 280px;
+        height: 44px;
+        line-height: 44px;
+        text-align: center;
+        font-family: Montserrat, sans-serif;
+        font-size: 34px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        opacity: 0;
+        z-index: 4;
+      }
+
+      #lbl-sono {
+        left: 160px;
+        color: #9b7ed8;
+      }
+
+      #lbl-mamada {
+        left: 400px;
+        color: #e87a5d;
+      }
+
+      #lbl-fralda {
+        left: 640px;
+        color: #5dc9b8;
+      }
+
+      .tag-line {
+        position: absolute;
+        left: 120px;
+        width: 840px;
+        text-align: center;
+        font-family: Montserrat, sans-serif;
+        font-size: 46px;
+        font-weight: 400;
+        line-height: 1.45;
+        letter-spacing: 0.01em;
+        color: #f0eef6;
+        white-space: nowrap;
+        z-index: 4;
+      }
+
+      #tag-1 {
+        top: 1384px;
+      }
+
+      #tag-2 {
+        top: 1451px;
+      }
+
+      #tag-3 {
+        top: 1518px;
+      }
+
+      .tag-line .w {
+        display: inline-block;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="10"
+      data-width="1080"
+      data-height="1920"
+    >
+      <div class="canvas clip" id="frame">
+        <div class="bg-pool" id="bg-pool"></div>
+        <div class="logo-glow" id="logo-glow"></div>
+
+        <!-- the lockup scales past its own box during the final breath (nothing sits at its
+             edges), so the box overflow is intentional -->
+        <div id="lockup" data-layout-allow-overflow="true">
+          <div class="logo-container" id="logo-tile">
+            <img
+              id="logo-img"
+              src="assets/nest_routine_logo.png"
+              width="400"
+              height="400"
+              alt="NestRoutine"
+            />
+          </div>
+
+          <div class="wordmark" id="wordmark">NestRoutine</div>
+
+          <svg
+            class="sleep-curve"
+            viewBox="0 0 1080 1920"
+            width="1080"
+            height="1920"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              id="sleep-curve-path"
+              d="M 140 1156 C 200 1156 240 1052 300 1052 C 380 1052 460 1220 540 1220 C 620 1220 700 1108 780 1108 C 850 1108 890 1144 940 1144"
+              fill="none"
+              stroke="#B8A9E8"
+              stroke-opacity="0.8"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-dasharray="1"
+              stroke-dashoffset="1"
+              pathLength="1"
+            />
+          </svg>
+
+          <div class="dot" id="dot-sono"></div>
+          <div class="dot" id="dot-mamada"></div>
+          <div class="dot" id="dot-fralda"></div>
+
+          <div class="event-label" id="lbl-sono">Sono</div>
+          <div class="event-label" id="lbl-mamada">Mamada</div>
+          <div class="event-label" id="lbl-fralda">Fralda</div>
+
+          <div class="tag-line" id="tag-1">
+            <span class="w">Entenda</span> <span class="w">o</span> <span class="w">ritmo</span>
+            <span class="w">do</span> <span class="w">seu</span> <span class="w">bebê.</span>
+          </div>
+          <div class="tag-line" id="tag-2">
+            <span class="w">Preveja</span> <span class="w">o</span> <span class="w">que</span>
+            <span class="w">vem</span> <span class="w">a</span> <span class="w">seguir.</span>
+          </div>
+          <div class="tag-line" id="tag-3">
+            <span class="w">Durma</span> <span class="w" style="color: #ffd93d">melhor.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var FRAME = 1 / 30;
+        function f(frames) {
+          return frames * FRAME;
+        }
+
+        var tl = gsap.timeline({ paused: true });
+
+        // f0 — radial pool fades up so frame 0 is deep navy, not flat black
+        tl.fromTo(
+          "#bg-pool",
+          { opacity: 0 },
+          { opacity: 1, duration: f(15), ease: "power2.out" },
+          0,
+        );
+
+        // f0 — THE HOOK: the sleep curve draws left to right, before anything is legible.
+        // The normalised unit (pathLength="1", dashoffset 1 -> 0) is the documented primary
+        // trick, but this engine's seek-by-frame capture snaps strokeDashoffset to integer
+        // values, which turns a 0..1 unit into a binary 1-or-0 pop. So we take the
+        // shot-plan's stated fallback: measure once at setup and drive real user units,
+        // where integer snapping is sub-pixel.
+        var curvePath = document.getElementById("sleep-curve-path");
+        var drawLen = 1;
+        if (curvePath && typeof curvePath.getTotalLength === "function") {
+          var measured = curvePath.getTotalLength();
+          if (isFinite(measured) && measured > 0) {
+            drawLen = measured;
+            curvePath.removeAttribute("pathLength");
+          }
+        }
+        gsap.set(curvePath, { strokeDasharray: drawLen, strokeDashoffset: drawLen });
+        tl.to(
+          "#sleep-curve-path",
+          { strokeDashoffset: 0, duration: f(45), ease: "power2.out" },
+          0,
+        );
+
+        // f12 -> f40 — icon rises out of blur and settles; never punches
+        tl.fromTo(
+          "#logo-tile",
+          { opacity: 0, y: 28, scale: 0.94, filter: "blur(18px)" },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            filter: "blur(0px)",
+            duration: f(28),
+            ease: "power3.out",
+          },
+          f(12),
+        );
+
+        // f24 -> f48 — lavender bloom peak; f48 -> f96 — decays to a resting 0.62, never to 0
+        tl.fromTo(
+          "#logo-glow",
+          { opacity: 0, scale: 0.55 },
+          { opacity: 1, scale: 1.05, duration: f(24), ease: "power2.out" },
+          f(24),
+        );
+        tl.to(
+          "#logo-glow",
+          { opacity: 0.62, scale: 1.0, duration: f(48), ease: "power2.out" },
+          f(48),
+        );
+
+        // f44 -> f60 — wordmark settles (opacity / lift / de-blur; letter-spacing is held
+        // static at -0.02em because tracking reflows text and cannot tween seek-safely)
+        tl.fromTo(
+          "#wordmark",
+          { opacity: 0, y: 18, filter: "blur(10px)" },
+          {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: f(16),
+            ease: "power3.out",
+          },
+          f(44),
+        );
+
+        // f96 / f114 / f132 — the curve stops drawing and starts delivering: one dot lands
+        // on each extremum, its legend row rises 4 frames later
+        var events = [
+          ["#dot-sono", "#lbl-sono", 96],
+          ["#dot-mamada", "#lbl-mamada", 114],
+          ["#dot-fralda", "#lbl-fralda", 132],
+        ];
+        events.forEach(function (evt) {
+          tl.fromTo(
+            evt[0],
+            { opacity: 0, scale: 0.35 },
+            { opacity: 1, scale: 1, duration: f(15), ease: "power2.out" },
+            f(evt[2]),
+          );
+          tl.fromTo(
+            evt[1],
+            { opacity: 0, y: 10 },
+            { opacity: 1, y: 0, duration: f(12), ease: "power2.out" },
+            f(evt[2] + 4),
+          );
+        });
+
+        // f132 -> f186 — quiet beat; nothing enters. f186 / f204 / f222 — per-word exhale
+        var lines = [
+          ["#tag-1", 186],
+          ["#tag-2", 204],
+          ["#tag-3", 222],
+        ];
+        lines.forEach(function (line) {
+          tl.fromTo(
+            line[0] + " .w",
+            { opacity: 0, y: 14, filter: "blur(8px)" },
+            {
+              opacity: 1,
+              y: 0,
+              filter: "blur(0px)",
+              duration: f(14),
+              ease: "power2.out",
+              stagger: f(3),
+            },
+            f(line[1]),
+          );
+        });
+
+        // f246 -> f300 — the only thing still moving: one breath in, one breath out,
+        // landing exactly back at rest (scale 1.000, glow 0.62) on the last frame
+        tl.to(
+          "#lockup",
+          { scale: 1.012, duration: f(27), ease: "sine.inOut", yoyo: true, repeat: 1 },
+          f(246),
+        );
+        tl.to(
+          "#logo-glow",
+          { opacity: 0.72, duration: f(27), ease: "sine.inOut", yoyo: true, repeat: 1 },
+          f(246),
+        );
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+      })();
+    </script>
+  </body>
+</html>

@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import '../models/baby.dart';
 import '../models/event.dart';
+import '../utils/storage_service.dart';
 import 'auth_service.dart';
 import 'analytics_service.dart';
 
@@ -16,21 +17,96 @@ class SyncService {
 
   String? get _userId => _authService.userId;
 
+  /// The signed in user's id, or null when anonymous.
+  String? get userId => _authService.userId;
+
   bool get isLoggedIn => _authService.isLoggedIn;
 
   // ── Babies ──
 
-  Future<void> syncBabyToSupabase(Baby baby) async {
+  /// Pushes every locally created baby and event to the cloud, keeping their
+  /// original UUIDs so nothing is duplicated.
+  ///
+  /// Runs once per user — guarded by [StorageService.isLocalDataMigrated] — so
+  /// data created while offline survives the first sign in.
+  Future<void> migrateLocalDataToCloud(String userId) async {
     if (!isLoggedIn) return;
+    if (StorageService.isLocalDataMigrated(userId)) return;
+
+    final localBabies = StorageService.loadBabies();
+    if (localBabies.isEmpty) {
+      await StorageService.setLocalDataMigrated(userId);
+      return;
+    }
+
     try {
-      await _client.from('babies').upsert({
+      await _client
+          .from('babies')
+          .upsert(localBabies.map(_babyToJson).toList());
+
+      for (final baby in localBabies) {
+        final events = StorageService.loadEvents(baby.id);
+        if (events.isEmpty) continue;
+        for (final chunk in _chunks(events, 500)) {
+          await _client
+              .from('events')
+              .upsert(chunk.map(_eventToJson).toList());
+        }
+      }
+
+      await StorageService.setLocalDataMigrated(userId);
+      debugPrint(
+        '[SyncService] Migrated ${localBabies.length} local babies to cloud',
+      );
+    } catch (e) {
+      debugPrint('[SyncService] Local data migration failed: $e');
+      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error,
+          properties: {
+            'operation': 'migrate_local_data',
+            'error': e.toString(),
+          });
+    }
+  }
+
+  Iterable<List<T>> _chunks<T>(List<T> source, int size) sync* {
+    for (var i = 0; i < source.length; i += size) {
+      yield source.sublist(
+        i,
+        i + size > source.length ? source.length : i + size,
+      );
+    }
+  }
+
+  Map<String, dynamic> _babyToJson(Baby baby) => {
         'id': baby.id,
         'user_id': _userId,
         'name': baby.name,
         'photo_path': baby.photoPath,
         'date_of_birth': baby.dateOfBirth.toUtc().toIso8601String(),
         'created_at': baby.createdAt.toUtc().toIso8601String(),
-      });
+      };
+
+  Map<String, dynamic> _eventToJson(BabyEvent event) => {
+        'id': event.id,
+        'baby_id': event.babyId,
+        'user_id': _userId,
+        'type': event.type.name,
+        'start_time': event.startTime.toUtc().toIso8601String(),
+        'end_time': event.endTime?.toUtc().toIso8601String(),
+        'notes': event.notes,
+        'feed_type': event.feedType?.name,
+        'feed_side': event.feedSide?.name,
+        'duration_minutes': event.durationMinutes,
+        'volume_ml': event.volumeMl,
+        'has_pee': event.hasPee,
+        'has_poop': event.hasPoop,
+        'diaper_texture': event.diaperTexture?.name,
+      };
+
+  Future<void> syncBabyToSupabase(Baby baby) async {
+    if (!isLoggedIn) return;
+    try {
+      await _client.from('babies').upsert(_babyToJson(baby));
     } catch (e) {
       debugPrint('[SyncService] Failed to sync baby: $e');
       _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
@@ -77,22 +153,7 @@ class SyncService {
   Future<void> syncEventToSupabase(BabyEvent event) async {
     if (!isLoggedIn) return;
     try {
-      await _client.from('events').upsert({
-        'id': event.id,
-        'baby_id': event.babyId,
-        'user_id': _userId,
-        'type': event.type.name,
-        'start_time': event.startTime.toUtc().toIso8601String(),
-        'end_time': event.endTime?.toUtc().toIso8601String(),
-        'notes': event.notes,
-        'feed_type': event.feedType?.name,
-        'feed_side': event.feedSide?.name,
-        'duration_minutes': event.durationMinutes,
-        'volume_ml': event.volumeMl,
-        'has_pee': event.hasPee,
-        'has_poop': event.hasPoop,
-        'diaper_texture': event.diaperTexture?.name,
-      });
+      await _client.from('events').upsert(_eventToJson(event));
     } catch (e) {
       debugPrint('[SyncService] Failed to sync event: $e');
       _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
@@ -132,22 +193,6 @@ class SyncService {
         'error': e.toString(),
       });
       return [];
-    }
-  }
-
-  // ── Bulk sync (first login) ──
-
-  Future<void> bulkSyncBabies(List<Baby> localBabies) async {
-    if (!isLoggedIn) return;
-    for (final baby in localBabies) {
-      await syncBabyToSupabase(baby);
-    }
-  }
-
-  Future<void> bulkSyncEvents(String babyId, List<BabyEvent> localEvents) async {
-    if (!isLoggedIn) return;
-    for (final event in localEvents) {
-      await syncEventToSupabase(event);
     }
   }
 }

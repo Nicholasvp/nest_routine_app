@@ -17,6 +17,7 @@ import '../services/paywall_trigger_service.dart';
 import '../services/purchase_service.dart';
 import '../services/review_service.dart';
 import '../widgets/bottom_sheets/bug_report_sheet.dart';
+import '../widgets/language_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -667,39 +668,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showLanguagePicker(BuildContext context, LocaleProvider localeProvider) {
-    final strings = context.read<LocaleProvider>().strings;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(strings.language),
-        content: RadioGroup<bool>(
-          groupValue: localeProvider.isPortuguese,
-          onChanged: (bool? isPortuguese) {
-            localeProvider.setLocale(isPortuguese == true ? 'pt' : 'en');
-            Navigator.pop(ctx);
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(strings.english),
-                leading: const Radio<bool>(
-                  value: false,
-                  activeColor: AppColors.sleepPurple,
-                ),
-              ),
-              ListTile(
-                title: Text(strings.portuguese),
-                leading: const Radio<bool>(
-                  value: true,
-                  activeColor: AppColors.sleepPurple,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    showLanguagePicker(context, localeProvider);
   }
 }
 
