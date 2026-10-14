@@ -154,7 +154,7 @@ class _FeedSheetState extends State<FeedSheet> {
                     icon: Icons.local_dining_outlined,
                     color: AppColors.feedOrange,
                     title: strings.stopNursing,
-                    subtitle: 'Feed logged',
+                    subtitle: strings.feedLogged,
                   );
                 },
                 icon: const Icon(Icons.stop_circle_outlined, size: 18),
@@ -383,7 +383,7 @@ class _FeedSheetState extends State<FeedSheet> {
                 icon: Icons.local_dining_outlined,
                 color: AppColors.feedOrange,
                 title: strings.startTimer,
-                subtitle: 'Timer started',
+                subtitle: strings.feedTimerStarted,
               );
             },
             icon: const Icon(Icons.play_circle_outlined, size: 20),
@@ -496,6 +496,7 @@ class _FeedSheetState extends State<FeedSheet> {
   }
 
   void _saveNew() {
+    final strings = context.read<LocaleProvider>().strings;
     final duration = _durationMinutes;
     final event = BabyEvent(
       id: '',
@@ -514,12 +515,13 @@ class _FeedSheetState extends State<FeedSheet> {
       context,
       icon: Icons.local_dining_outlined,
       color: AppColors.feedOrange,
-      title: 'Feed logged',
+      title: strings.feedLogged,
       subtitle: _feedType == FeedType.breast ? '${duration}min' : '$_volumeMl ml',
     );
   }
 
   void _saveEdit() {
+    final strings = context.read<LocaleProvider>().strings;
     if (widget.event != null && widget.onUpdateFeed != null) {
       final duration = _durationMinutes;
       final updated = widget.event!.copyWith(
@@ -536,7 +538,7 @@ class _FeedSheetState extends State<FeedSheet> {
         context,
         icon: Icons.local_dining_outlined,
         color: AppColors.feedOrange,
-        title: 'Feed updated',
+        title: strings.feedUpdated,
         subtitle: '$duration min',
       );
     }

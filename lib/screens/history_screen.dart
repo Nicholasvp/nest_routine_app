@@ -64,8 +64,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
         centerTitle: true,
         leading: GestureDetector(
           onTap: () => NavigationService.goToHome(),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.textSecondary, size: 20),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textSecondary,
+            size: 20,
+          ),
         ),
       ),
       body: Column(
@@ -74,13 +77,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _currentDay,
-              builder: (context, day, __) {
-                final events =
-                    eventProvider.getEventsForDay(baby.id, day);
+              builder: (context, day, _) {
+                final events = eventProvider.getEventsForDay(baby.id, day);
                 return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeIn,
+                  duration: const Duration(milliseconds: 500),
+                  switchInCurve: Curves.easeInOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
                   transitionBuilder: (child, animation) => FadeTransition(
                     opacity: animation,
                     child: SlideTransition(
@@ -97,15 +99,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.history_outlined,
-                                  size: 48,
-                                  color: AppColors.textTertiary
-                                      .withValues(alpha: 0.5)),
+                              Icon(
+                                Icons.history_outlined,
+                                size: 48,
+                                color: AppColors.textTertiary.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
                               const SizedBox(height: 12),
                               Text(
                                 strings.noEventsForDay,
                                 style: const TextStyle(
-                                    color: AppColors.textTertiary, fontSize: 15),
+                                  color: AppColors.textTertiary,
+                                  fontSize: 15,
+                                ),
                               ),
                             ],
                           ),
@@ -119,9 +126,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             return EventCard(
                               event: event,
                               onTap: () => _showEditEventSheet(
-                                  context, eventProvider, event),
-                              onDelete: () => _confirmDelete(
-                                  context, eventProvider, event),
+                                context,
+                                eventProvider,
+                                event,
+                              ),
+                              onDelete: () =>
+                                  _confirmDelete(context, eventProvider, event),
                             );
                           },
                         ),
@@ -134,8 +144,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildDayNavigation(BuildContext context,
-      EventProvider eventProvider, String babyId) {
+  Widget _buildDayNavigation(
+    BuildContext context,
+    EventProvider eventProvider,
+    String babyId,
+  ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isPt = context.read<LocaleProvider>().isPortuguese;
@@ -148,7 +161,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           _NavButton(
             icon: Icons.chevron_left_rounded,
             onTap: () {
-              _currentDay.value = _currentDay.value.subtract(const Duration(days: 1));
+              _currentDay.value = _currentDay.value.subtract(
+                const Duration(days: 1),
+              );
             },
           ),
           Expanded(
@@ -174,8 +189,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 }
               },
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.cardDark,
                   borderRadius: BorderRadius.circular(20),
@@ -193,7 +210,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('MMM d, yyyy', isPt ? 'pt_BR' : 'en').format(_currentDay.value),
+                      DateFormat(
+                        'MMM d, yyyy',
+                        isPt ? 'pt_BR' : 'en',
+                      ).format(_currentDay.value),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 14,
@@ -210,8 +230,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
             isEnabled: !AppDateUtils.isSameDay(_currentDay.value, today),
             onTap: _currentDay.value.isBefore(today)
                 ? () {
-                    _currentDay.value =
-                        _currentDay.value.add(const Duration(days: 1));
+                    _currentDay.value = _currentDay.value.add(
+                      const Duration(days: 1),
+                    );
                   }
                 : null,
           ),
@@ -221,7 +242,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _showEditEventSheet(
-      BuildContext context, EventProvider eventProvider, BabyEvent event) {
+    BuildContext context,
+    EventProvider eventProvider,
+    BabyEvent event,
+  ) {
     HapticFeedback.lightImpact();
 
     switch (event.type) {
@@ -246,8 +270,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
           backgroundColor: Colors.transparent,
           builder: (_) => FeedSheet(
             event: event,
-            onStartNursing: (_, __) {},
-            onStopNursing: (_, __, {startTime}) {},
+            onStartNursing: (_, _) {},
+            onStopNursing: (_, _, {startTime}) {},
             onLogFeed: (_) {},
             onUpdateFeed: (updated) {
               eventProvider.updateEvent(updated);
@@ -273,7 +297,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _confirmDelete(
-      BuildContext context, EventProvider eventProvider, BabyEvent event) {
+    BuildContext context,
+    EventProvider eventProvider,
+    BabyEvent event,
+  ) {
     final strings = context.read<LocaleProvider>().strings;
     showDialog(
       context: context,
@@ -290,9 +317,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               eventProvider.removeEvent(event.babyId, event.id);
               Navigator.pop(ctx);
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             child: Text(strings.delete),
           ),
         ],
@@ -306,11 +331,7 @@ class _NavButton extends StatelessWidget {
   final bool isEnabled;
   final VoidCallback? onTap;
 
-  const _NavButton({
-    required this.icon,
-    this.isEnabled = true,
-    this.onTap,
-  });
+  const _NavButton({required this.icon, this.isEnabled = true, this.onTap});
 
   @override
   Widget build(BuildContext context) {

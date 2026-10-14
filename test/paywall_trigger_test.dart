@@ -89,27 +89,26 @@ void main() {
       expect(PaywallTriggerService.lastBlockReason, 'daily_limit_reached');
     });
 
-    test('intervalo exigido cresce conforme o usuario dispensa', () async {
+    test('dispensas nao aumentam o intervalo de apresentacao', () async {
       await setInstallDate(_daysAgo(30));
 
       expect(PaywallTriggerService.currentInterval.inHours, 24);
 
       await PaywallTriggerService.recordDismiss();
-      expect(PaywallTriggerService.currentInterval.inHours, 48);
+      expect(PaywallTriggerService.currentInterval.inHours, 24);
 
       await PaywallTriggerService.recordDismiss();
-      expect(PaywallTriggerService.currentInterval.inHours, 72);
+      expect(PaywallTriggerService.currentInterval.inHours, 24);
     });
 
-    test('tres dispensas desligam o paywall automatico', () async {
+    test('dispensas repetidas nao desligam o paywall automatico', () async {
       await setInstallDate(_daysAgo(30));
 
       await PaywallTriggerService.recordDismiss();
       await PaywallTriggerService.recordDismiss();
       await PaywallTriggerService.recordDismiss();
 
-      expect(canPresent(), isFalse);
-      expect(PaywallTriggerService.lastBlockReason, 'too_many_dismissals');
+      expect(canPresent(), isTrue);
     });
 
     test('compra ou restauracao zera o contador de dispensas', () async {

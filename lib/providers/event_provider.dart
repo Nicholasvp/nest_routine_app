@@ -15,6 +15,9 @@ import '../services/widget_service.dart';
 import 'notification_provider.dart';
 
 class EventProvider extends ChangeNotifier {
+  /// Recovery cap for a sleep timer left running by mistake. This is an
+  /// app-side data limit, not a medical recommendation about infant sleep.
+  static const Duration _maxTrackedSleep = Duration(hours: 12);
   final Map<String, List<BabyEvent>> _eventsByBaby = {};
   Timer? _tickTimer;
 
@@ -55,8 +58,7 @@ class EventProvider extends ChangeNotifier {
     return events.where((e) {
       return e.startTime.isAfter(today) ||
           (e.endTime != null && e.endTime!.isAfter(today));
-    }).toList()
-      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    }).toList()..sort((a, b) => b.startTime.compareTo(a.startTime));
   }
 
   List<BabyEvent> getEventsForDay(String babyId, DateTime day) {
@@ -72,14 +74,11 @@ class EventProvider extends ChangeNotifier {
           (e.startTime.isBefore(startOfDay) &&
               e.endTime != null &&
               e.endTime!.isAfter(startOfDay));
-    }).toList()
-      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    }).toList()..sort((a, b) => b.startTime.compareTo(a.startTime));
   }
 
   List<BabyEvent> getSleepEvents(String babyId) {
-    return (getEvents(babyId))
-        .where((e) => e.type == EventType.sleep)
-        .toList()
+    return (getEvents(babyId)).where((e) => e.type == EventType.sleep).toList()
       ..sort((a, b) => b.startTime.compareTo(a.startTime));
   }
 
@@ -105,6 +104,15 @@ class EventProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[EventProvider] Failed to load events from cloud: $e');
     }
+  }
+
+  Future<List<BabyEvent>?> loadSleepEventsFromCloudSince(
+    String babyId,
+    DateTime since,
+  ) {
+    final syncService = _syncService;
+    if (syncService == null) return Future.value(null);
+    return syncService.loadSleepEventsSince(babyId, since);
   }
 
   List<BabyEvent> _mergeEvents(List<BabyEvent> local, List<BabyEvent> cloud) {
@@ -160,7 +168,20 @@ class EventProvider extends ChangeNotifier {
       final event = events[i];
       if (!event.isOngoing) continue;
 
-      if (event.startTime.isBefore(today)) {
+      // Sleep timers can span midnight, but should not remain open forever if
+      // the user forgets to stop one. Preserve the actual start and cap only
+      // the recorded end at the recovery limit.
+      if (event.type == EventType.sleep) {
+        if (now.difference(event.startTime) >= _maxTrackedSleep) {
+          final capped = event.copyWith(
+            endTime: event.startTime.add(_maxTrackedSleep),
+          );
+          events[i] = capped;
+          unawaited(_syncService?.syncEventToSupabase(capped));
+          needsSave = true;
+        }
+        continue;
+      } else if (event.startTime.isBefore(today)) {
         events[i] = event.copyWith(endTime: today);
         needsSave = true;
       } else if (event.type == EventType.feed &&
@@ -177,13 +198,14 @@ class EventProvider extends ChangeNotifier {
       StorageService.saveEvents(babyId, events);
     }
 
-    final ongoing = events
-        .where((e) => e.isOngoing && !e.startTime.isBefore(today))
-        .toList();
-    _activeSleepTimer =
-        ongoing.where((e) => e.type == EventType.sleep).firstOrNull;
-    _activeFeedTimer =
-        ongoing.where((e) => e.type == EventType.feed).firstOrNull;
+    final ongoing = events.where((e) => e.isOngoing).toList()
+      ..sort((a, b) => b.startTime.compareTo(a.startTime));
+    _activeSleepTimer = ongoing
+        .where((e) => e.type == EventType.sleep)
+        .firstOrNull;
+    _activeFeedTimer = ongoing
+        .where((e) => e.type == EventType.feed)
+        .firstOrNull;
     _updateTickTimerState();
   }
 
@@ -191,8 +213,21 @@ class EventProvider extends ChangeNotifier {
     _tickTimer?.cancel();
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _autoStopFeedIfNeeded();
+      _autoStopSleepIfNeeded();
       notifyListeners();
     });
+  }
+
+  void _autoStopSleepIfNeeded() {
+    final timer = _activeSleepTimer;
+    if (timer == null ||
+        DateTime.now().difference(timer.startTime) < _maxTrackedSleep) {
+      return;
+    }
+    stopSleepTimer(
+      timer.babyId,
+      endTime: timer.startTime.add(_maxTrackedSleep),
+    );
   }
 
   void _autoStopFeedIfNeeded() {
@@ -201,8 +236,7 @@ class EventProvider extends ChangeNotifier {
         60) {
       stopFeedTimer(
         _activeFeedTimer!.babyId,
-        endTime:
-            _activeFeedTimer!.startTime.add(const Duration(hours: 1)),
+        endTime: _activeFeedTimer!.startTime.add(const Duration(hours: 1)),
         feedSide: _activeFeedTimer!.feedSide,
         durationMinutes: 60,
       );
@@ -220,11 +254,15 @@ class EventProvider extends ChangeNotifier {
     _updateActiveTimers(event.babyId);
     await StorageService.saveEvents(event.babyId, _eventsByBaby[event.babyId]!);
     _syncService?.syncEventToSupabase(event);
-    _analyticsService?.log(AnalyticsService.addEvent, AnalyticsService.usage, properties: {
-      'event_id': event.id,
-      'baby_id': event.babyId,
-      'event_type': event.type.name,
-    });
+    _analyticsService?.log(
+      AnalyticsService.addEvent,
+      AnalyticsService.usage,
+      properties: {
+        'event_id': event.id,
+        'baby_id': event.babyId,
+        'event_type': event.type.name,
+      },
+    );
     notifyListeners();
     _refreshWidget(event.babyId);
     unawaited(_maybePaywallAfterEvent());
@@ -234,7 +272,10 @@ class EventProvider extends ChangeNotifier {
     );
   }
 
-  Future<BabyEvent> startSleepTimer(String babyId, {DateTime? startTime}) async {
+  Future<BabyEvent> startSleepTimer(
+    String babyId, {
+    DateTime? startTime,
+  }) async {
     final event = BabyEvent(
       id: const Uuid().v4(),
       babyId: babyId,
@@ -248,10 +289,11 @@ class EventProvider extends ChangeNotifier {
     _startTickTimer();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(event);
-    _analyticsService?.log(AnalyticsService.startSleep, AnalyticsService.usage, properties: {
-      'event_id': event.id,
-      'baby_id': babyId,
-    });
+    _analyticsService?.log(
+      AnalyticsService.startSleep,
+      AnalyticsService.usage,
+      properties: {'event_id': event.id, 'baby_id': babyId},
+    );
     notifyListeners();
     _refreshWidget(babyId);
     unawaited(_maybePaywallAfterEvent());
@@ -261,23 +303,29 @@ class EventProvider extends ChangeNotifier {
 
   Future<void> stopSleepTimer(String babyId, {DateTime? endTime}) async {
     if (_activeSleepTimer == null) return;
-    final index = _eventsByBaby[babyId]
-            ?.indexWhere((e) => e.id == _activeSleepTimer!.id) ??
+    final index =
+        _eventsByBaby[babyId]?.indexWhere(
+          (e) => e.id == _activeSleepTimer!.id,
+        ) ??
         -1;
     if (index == -1) return;
     final updated = _activeSleepTimer!.copyWith(
       endTime: endTime ?? DateTime.now(),
     );
     _eventsByBaby[babyId]![index] = updated;
-      _activeSleepTimer = null;
+    _activeSleepTimer = null;
     _updateTickTimerState();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(updated);
-    _analyticsService?.log(AnalyticsService.stopSleep, AnalyticsService.usage, properties: {
-      'event_id': updated.id,
-      'baby_id': babyId,
-      'duration_minutes': updated.duration?.inMinutes,
-    });
+    _analyticsService?.log(
+      AnalyticsService.stopSleep,
+      AnalyticsService.usage,
+      properties: {
+        'event_id': updated.id,
+        'baby_id': babyId,
+        'duration_minutes': updated.duration?.inMinutes,
+      },
+    );
     notifyListeners();
     _refreshWidget(babyId);
     unawaited(_maybePaywallAfterEvent());
@@ -298,10 +346,11 @@ class EventProvider extends ChangeNotifier {
     _startTickTimer();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(event);
-    _analyticsService?.log(AnalyticsService.startFeed, AnalyticsService.usage, properties: {
-      'event_id': event.id,
-      'baby_id': babyId,
-    });
+    _analyticsService?.log(
+      AnalyticsService.startFeed,
+      AnalyticsService.usage,
+      properties: {'event_id': event.id, 'baby_id': babyId},
+    );
     notifyListeners();
     _refreshWidget(babyId);
     unawaited(_maybePaywallAfterEvent());
@@ -310,8 +359,10 @@ class EventProvider extends ChangeNotifier {
 
   Future<void> updateTimerFeedSide(String babyId, FeedSide feedSide) async {
     if (_activeFeedTimer == null) return;
-    final index = _eventsByBaby[babyId]
-            ?.indexWhere((e) => e.id == _activeFeedTimer!.id) ??
+    final index =
+        _eventsByBaby[babyId]?.indexWhere(
+          (e) => e.id == _activeFeedTimer!.id,
+        ) ??
         -1;
     if (index == -1) return;
     final updated = _activeFeedTimer!.copyWith(feedSide: feedSide);
@@ -322,10 +373,18 @@ class EventProvider extends ChangeNotifier {
     _refreshWidget(babyId);
   }
 
-  Future<void> stopFeedTimer(String babyId, {DateTime? endTime, FeedSide? feedSide, int? durationMinutes, DateTime? startTime}) async {
+  Future<void> stopFeedTimer(
+    String babyId, {
+    DateTime? endTime,
+    FeedSide? feedSide,
+    int? durationMinutes,
+    DateTime? startTime,
+  }) async {
     if (_activeFeedTimer == null) return;
-    final index = _eventsByBaby[babyId]
-            ?.indexWhere((e) => e.id == _activeFeedTimer!.id) ??
+    final index =
+        _eventsByBaby[babyId]?.indexWhere(
+          (e) => e.id == _activeFeedTimer!.id,
+        ) ??
         -1;
     if (index == -1) return;
     final adjustedStart = startTime ?? _activeFeedTimer!.startTime;
@@ -333,23 +392,26 @@ class EventProvider extends ChangeNotifier {
       startTime: adjustedStart,
       endTime: endTime ?? DateTime.now(),
       feedSide: feedSide,
-      durationMinutes: durationMinutes ??
-          (endTime ?? DateTime.now())
-              .difference(adjustedStart)
-              .inMinutes,
+      durationMinutes:
+          durationMinutes ??
+          (endTime ?? DateTime.now()).difference(adjustedStart).inMinutes,
     );
     _eventsByBaby[babyId]![index] = updated;
     _activeFeedTimer = null;
     _updateTickTimerState();
     await StorageService.saveEvents(babyId, _eventsByBaby[babyId]!);
     _syncService?.syncEventToSupabase(updated);
-    _analyticsService?.log(AnalyticsService.stopFeed, AnalyticsService.usage, properties: {
-      'event_id': updated.id,
-      'baby_id': babyId,
-      'duration_minutes': updated.durationMinutes,
-      'feed_type': updated.feedType?.name,
-      'feed_side': updated.feedSide?.name,
-    });
+    _analyticsService?.log(
+      AnalyticsService.stopFeed,
+      AnalyticsService.usage,
+      properties: {
+        'event_id': updated.id,
+        'baby_id': babyId,
+        'duration_minutes': updated.durationMinutes,
+        'feed_type': updated.feedType?.name,
+        'feed_side': updated.feedSide?.name,
+      },
+    );
     notifyListeners();
     _refreshWidget(babyId);
     unawaited(_maybePaywallAfterEvent());
@@ -359,7 +421,7 @@ class EventProvider extends ChangeNotifier {
   ///
   /// Nao abre a cada evento: precisa atingir o marco de
   /// [PaywallTriggerService.eventsBetweenPaywalls] e ainda passar pelo
-  /// throttle normal (cooldown, limite diario, carencia, dispensas).
+  /// throttle normal (cooldown, limite diario e carencia).
   Future<void> _maybePaywallAfterEvent() async {
     await PaywallTriggerService.recordEventLogged();
 
@@ -367,7 +429,8 @@ class EventProvider extends ChangeNotifier {
     // problema e o marco, o contexto ou o throttle.
     final events = PaywallTriggerService.eventsSinceLastPaywall;
     debugPrint(
-        '[EventProvider] eventos desde o ultimo paywall: $events/${PaywallTriggerService.eventsBetweenPaywalls}');
+      '[EventProvider] eventos desde o ultimo paywall: $events/${PaywallTriggerService.eventsBetweenPaywalls}',
+    );
 
     if (events < PaywallTriggerService.eventsBetweenPaywalls) {
       return;
@@ -409,8 +472,7 @@ class EventProvider extends ChangeNotifier {
   Future<void> removeEvent(String babyId, String eventId) async {
     _eventsByBaby[babyId]?.removeWhere((e) => e.id == eventId);
     _updateActiveTimers(babyId);
-    await StorageService.saveEvents(
-        babyId, _eventsByBaby[babyId] ?? []);
+    await StorageService.saveEvents(babyId, _eventsByBaby[babyId] ?? []);
     _syncService?.deleteEventFromSupabase(eventId);
     notifyListeners();
     _refreshWidget(babyId);
@@ -452,18 +514,20 @@ class EventProvider extends ChangeNotifier {
     for (final e in events) {
       if (e.type == EventType.sleep && e.endTime != null) {
         if (e.endTime!.isAfter(startOfDay) || e.startTime.isAfter(startOfDay)) {
-          final effectiveStart =
-              e.startTime.isAfter(startOfDay) ? e.startTime : startOfDay;
+          final effectiveStart = e.startTime.isAfter(startOfDay)
+              ? e.startTime
+              : startOfDay;
           final effectiveEnd = e.endTime!;
           if (effectiveEnd.isAfter(effectiveStart)) {
-            totalMinutes +=
-                effectiveEnd.difference(effectiveStart).inMinutes;
+            totalMinutes += effectiveEnd.difference(effectiveStart).inMinutes;
           }
         }
       }
     }
     if (_activeSleepTimer != null) {
-      final activeMinutes = DateTime.now().difference(_activeSleepTimer!.startTime).inMinutes;
+      final activeMinutes = DateTime.now()
+          .difference(_activeSleepTimer!.startTime)
+          .inMinutes;
       totalMinutes += activeMinutes.clamp(0, 1440);
     }
     final hours = totalMinutes / 60;
@@ -477,13 +541,14 @@ class EventProvider extends ChangeNotifier {
     double totalMinutes = 0;
     for (final e in events) {
       if (e.type == EventType.sleep && e.endTime != null) {
-        final effectiveStart =
-            e.startTime.isAfter(startOfDay) ? e.startTime : startOfDay;
-        final effectiveEnd =
-            e.endTime!.isBefore(endOfDay) ? e.endTime! : endOfDay;
+        final effectiveStart = e.startTime.isAfter(startOfDay)
+            ? e.startTime
+            : startOfDay;
+        final effectiveEnd = e.endTime!.isBefore(endOfDay)
+            ? e.endTime!
+            : endOfDay;
         if (effectiveEnd.isAfter(effectiveStart)) {
-          totalMinutes +=
-              effectiveEnd.difference(effectiveStart).inMinutes;
+          totalMinutes += effectiveEnd.difference(effectiveStart).inMinutes;
         }
       }
     }
@@ -504,24 +569,28 @@ class EventProvider extends ChangeNotifier {
 
   double getAverageFeedInterval(String babyId, {int days = 3}) {
     final events = _eventsByBaby[babyId] ?? [];
-    final feeds = events
-        .where((e) =>
-            e.type == EventType.feed &&
-            e.startTime
-                .isAfter(DateTime.now().subtract(Duration(days: days))))
-        .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+    final feeds =
+        events
+            .where(
+              (e) =>
+                  e.type == EventType.feed &&
+                  e.startTime.isAfter(
+                    DateTime.now().subtract(Duration(days: days)),
+                  ),
+            )
+            .toList()
+          ..sort((a, b) => a.startTime.compareTo(b.startTime));
     if (feeds.length < 2) return 0;
     double totalGap = 0;
     for (int i = 1; i < feeds.length; i++) {
-      totalGap +=
-          feeds[i].startTime.difference(feeds[i - 1].startTime).inMinutes;
+      totalGap += feeds[i].startTime
+          .difference(feeds[i - 1].startTime)
+          .inMinutes;
     }
     return totalGap / (feeds.length - 1);
   }
 
-  Map<DateTime, double> getSleepHoursPerDay(String babyId,
-      {int days = 7}) {
+  Map<DateTime, double> getSleepHoursPerDay(String babyId, {int days = 7}) {
     final result = <DateTime, double>{};
     final now = DateTime.now();
     for (int i = days - 1; i >= 0; i--) {
@@ -550,7 +619,11 @@ class EventProvider extends ChangeNotifier {
     final events = _eventsInRange(babyId, days);
     for (final e in events) {
       if (e.type == EventType.feed && e.volumeMl != null) {
-        final day = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
+        final day = DateTime(
+          e.startTime.year,
+          e.startTime.month,
+          e.startTime.day,
+        );
         result.update(day, (v) => v + e.volumeMl!, ifAbsent: () => e.volumeMl!);
       }
     }
@@ -586,7 +659,11 @@ class EventProvider extends ChangeNotifier {
     final events = _eventsInRange(babyId, days);
     for (final e in events) {
       if (e.type == EventType.feed) {
-        final day = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
+        final day = DateTime(
+          e.startTime.year,
+          e.startTime.month,
+          e.startTime.day,
+        );
         result.update(day, (v) => v + 1, ifAbsent: () => 1);
       }
     }
@@ -605,7 +682,11 @@ class EventProvider extends ChangeNotifier {
     final events = _eventsInRange(babyId, days);
     for (final e in events) {
       if (e.type == EventType.pee || e.type == EventType.poop) {
-        final day = DateTime(e.startTime.year, e.startTime.month, e.startTime.day);
+        final day = DateTime(
+          e.startTime.year,
+          e.startTime.month,
+          e.startTime.day,
+        );
         result.update(day, (v) => v + 1, ifAbsent: () => 1);
       }
     }
@@ -613,7 +694,9 @@ class EventProvider extends ChangeNotifier {
   }
 
   (int peeOnly, int poopOnly, int both) getPeePoopBreakdown(
-      String babyId, {int days = 7}) {
+    String babyId, {
+    int days = 7,
+  }) {
     final events = _eventsInRange(babyId, days);
     int pee = 0, poop = 0, both = 0;
     for (final e in events) {
@@ -631,13 +714,14 @@ class EventProvider extends ChangeNotifier {
   }
 
   Map<DiaperTexture, int> getDiaperTextureDistribution(
-      String babyId, {int days = 7}) {
+    String babyId, {
+    int days = 7,
+  }) {
     final events = _eventsInRange(babyId, days);
     final textures = <DiaperTexture, int>{};
     for (final e in events) {
       if (e.diaperTexture != null) {
-        textures[e.diaperTexture!] =
-            (textures[e.diaperTexture!] ?? 0) + 1;
+        textures[e.diaperTexture!] = (textures[e.diaperTexture!] ?? 0) + 1;
       }
     }
     return textures;
@@ -645,7 +729,9 @@ class EventProvider extends ChangeNotifier {
 
   int getTotalDiaperChanges(String babyId, {int days = 7}) {
     final events = _eventsInRange(babyId, days);
-    return events.where((e) => e.type == EventType.pee || e.type == EventType.poop).length;
+    return events
+        .where((e) => e.type == EventType.pee || e.type == EventType.poop)
+        .length;
   }
 
   double getAverageDiapersPerDay(String babyId, {int days = 7}) {

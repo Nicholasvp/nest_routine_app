@@ -137,6 +137,13 @@ class _SleepWindowBatteryState extends State<SleepWindowBattery>
   }
 
   String _statusText(SleepBatteryCalculator calc, Strings strings) {
+    final untilSleepy = calc.minutesUntilSleepy;
+    if (untilSleepy > 0) {
+      return strings.sleepinessIn(untilSleepy);
+    }
+    if (calc.minutesUntilCritical > 30) {
+      return strings.sleepinessNow;
+    }
     final remaining = calc.minutesUntilCritical;
     if (remaining <= 0) {
       return strings.windowClosed;

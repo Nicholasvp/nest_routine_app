@@ -42,7 +42,12 @@ class _SleepSheetState extends State<SleepSheet> {
   void initState() {
     super.initState();
     _fellAsleepStart = DateTime.now();
-    if (widget.event != null && widget.event!.endTime != null) {
+    if (widget.activeTimer != null) {
+      // When waking a running nap, show its actual start instead of the
+      // generic manual-log default (now minus one hour).
+      _manualStart = widget.activeTimer!.startTime;
+      _manualEnd = DateTime.now();
+    } else if (widget.event != null && widget.event!.endTime != null) {
       _manualStart = widget.event!.startTime;
       _manualEnd = widget.event!.endTime!;
     } else {
@@ -248,7 +253,7 @@ class _SleepSheetState extends State<SleepSheet> {
               icon: Icons.nightlight_round,
               color: AppColors.sleepPurple,
               title: strings.babyFellAsleep,
-              subtitle: 'Sleep timer started',
+              subtitle: strings.sleepTimerStarted,
             );
           },
           icon: const Icon(Icons.nightlight_round, size: 20),
@@ -305,7 +310,7 @@ class _SleepSheetState extends State<SleepSheet> {
 
   Widget _buildQuickTimes(BuildContext context) {
     final strings = context.watch<LocaleProvider>().strings;
-    final quickTimes = [30, 60, 90, 120];
+    final quickTimes = [15, 30, 60, 90, 120];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,6 +338,13 @@ class _SleepSheetState extends State<SleepSheet> {
                     widget.onStopSleep(endTime);
                   }
                   Navigator.of(context).pop();
+                  EventSuccessToast.show(
+                    context,
+                    icon: Icons.nightlight_round,
+                    color: AppColors.sleepPurple,
+                    title: strings.sleepLogged,
+                    subtitle: strings.minutes_(minutes),
+                  );
                 },
                 selectedColor: AppColors.sleepPurple.withValues(alpha: 0.2),
                 checkmarkColor: AppColors.sleepPurple,
@@ -407,7 +419,7 @@ class _SleepSheetState extends State<SleepSheet> {
                     icon: Icons.nightlight_round,
                     color: AppColors.wakeYellow,
                     title: strings.wakeUp,
-                    subtitle: 'Sleep logged',
+                    subtitle: strings.sleepLogged,
                   );
                 },
                 icon: const Icon(Icons.stop_circle_outlined, size: 20),
@@ -439,7 +451,7 @@ class _SleepSheetState extends State<SleepSheet> {
                       icon: Icons.nightlight_round,
                       color: AppColors.sleepPurple,
                       title: strings.adjustSleepTime,
-                      subtitle: 'Sleep updated',
+                      subtitle: strings.sleepUpdated,
                     );
                   } else if (widget.onQuickLog != null) {
                     widget.onQuickLog!(_manualStart, _resolvedManualEnd);
@@ -449,7 +461,7 @@ class _SleepSheetState extends State<SleepSheet> {
                       icon: Icons.nightlight_round,
                       color: AppColors.sleepPurple,
                       title: strings.logSleep,
-                      subtitle: 'Sleep logged',
+                      subtitle: strings.sleepLogged,
                     );
                   } else {
                     widget.onStartSleep(_manualStart);
@@ -460,7 +472,7 @@ class _SleepSheetState extends State<SleepSheet> {
                       icon: Icons.nightlight_round,
                       color: AppColors.sleepPurple,
                       title: strings.logSleep,
-                      subtitle: 'Sleep logged',
+                      subtitle: strings.sleepLogged,
                     );
                   }
                 },

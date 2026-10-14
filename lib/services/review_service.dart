@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:in_app_review/in_app_review.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
+import '../providers/locale_provider.dart';
 import 'analytics_service.dart';
 
 class ReviewService {
@@ -119,6 +121,7 @@ class _ReviewModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.watch<LocaleProvider>().strings;
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
@@ -147,8 +150,8 @@ class _ReviewModal extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Curtindo o NestRoutine?',
+            Text(
+              strings.reviewPromptTitle,
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 20,
@@ -157,7 +160,7 @@ class _ReviewModal extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Sua avaliação ajuda outros pais a descobrirem o NestRoutine!',
+              strings.reviewPromptDescription,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary.withValues(alpha: 0.8),
@@ -171,8 +174,8 @@ class _ReviewModal extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onAccept,
                 icon: const Icon(Icons.star_rounded, size: 20),
-                label: const Text(
-                  'Avaliar NestRoutine',
+                label: Text(
+                  strings.rateApp,
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 style: FilledButton.styleFrom(
@@ -188,7 +191,7 @@ class _ReviewModal extends StatelessWidget {
             TextButton(
               onPressed: onDecline,
               child: Text(
-                'Agora não',
+                strings.reviewPromptLater,
                 style: TextStyle(
                   color: AppColors.textSecondary.withValues(alpha: 0.7),
                   fontSize: 13,

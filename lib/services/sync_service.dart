@@ -48,9 +48,7 @@ class SyncService {
         final events = StorageService.loadEvents(baby.id);
         if (events.isEmpty) continue;
         for (final chunk in _chunks(events, 500)) {
-          await _client
-              .from('events')
-              .upsert(chunk.map(_eventToJson).toList());
+          await _client.from('events').upsert(chunk.map(_eventToJson).toList());
         }
       }
 
@@ -60,11 +58,11 @@ class SyncService {
       );
     } catch (e) {
       debugPrint('[SyncService] Local data migration failed: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error,
-          properties: {
-            'operation': 'migrate_local_data',
-            'error': e.toString(),
-          });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'migrate_local_data', 'error': e.toString()},
+      );
     }
   }
 
@@ -78,30 +76,30 @@ class SyncService {
   }
 
   Map<String, dynamic> _babyToJson(Baby baby) => {
-        'id': baby.id,
-        'user_id': _userId,
-        'name': baby.name,
-        'photo_path': baby.photoPath,
-        'date_of_birth': baby.dateOfBirth.toUtc().toIso8601String(),
-        'created_at': baby.createdAt.toUtc().toIso8601String(),
-      };
+    'id': baby.id,
+    'user_id': _userId,
+    'name': baby.name,
+    'photo_path': baby.photoPath,
+    'date_of_birth': baby.dateOfBirth.toUtc().toIso8601String(),
+    'created_at': baby.createdAt.toUtc().toIso8601String(),
+  };
 
   Map<String, dynamic> _eventToJson(BabyEvent event) => {
-        'id': event.id,
-        'baby_id': event.babyId,
-        'user_id': _userId,
-        'type': event.type.name,
-        'start_time': event.startTime.toUtc().toIso8601String(),
-        'end_time': event.endTime?.toUtc().toIso8601String(),
-        'notes': event.notes,
-        'feed_type': event.feedType?.name,
-        'feed_side': event.feedSide?.name,
-        'duration_minutes': event.durationMinutes,
-        'volume_ml': event.volumeMl,
-        'has_pee': event.hasPee,
-        'has_poop': event.hasPoop,
-        'diaper_texture': event.diaperTexture?.name,
-      };
+    'id': event.id,
+    'baby_id': event.babyId,
+    'user_id': _userId,
+    'type': event.type.name,
+    'start_time': event.startTime.toUtc().toIso8601String(),
+    'end_time': event.endTime?.toUtc().toIso8601String(),
+    'notes': event.notes,
+    'feed_type': event.feedType?.name,
+    'feed_side': event.feedSide?.name,
+    'duration_minutes': event.durationMinutes,
+    'volume_ml': event.volumeMl,
+    'has_pee': event.hasPee,
+    'has_poop': event.hasPoop,
+    'diaper_texture': event.diaperTexture?.name,
+  };
 
   Future<void> syncBabyToSupabase(Baby baby) async {
     if (!isLoggedIn) return;
@@ -109,10 +107,11 @@ class SyncService {
       await _client.from('babies').upsert(_babyToJson(baby));
     } catch (e) {
       debugPrint('[SyncService] Failed to sync baby: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
-        'operation': 'sync_baby',
-        'error': e.toString(),
-      });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'sync_baby', 'error': e.toString()},
+      );
     }
   }
 
@@ -122,10 +121,11 @@ class SyncService {
       await _client.from('babies').delete().eq('id', babyId);
     } catch (e) {
       debugPrint('[SyncService] Failed to delete baby: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
-        'operation': 'delete_baby',
-        'error': e.toString(),
-      });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'delete_baby', 'error': e.toString()},
+      );
     }
   }
 
@@ -140,10 +140,11 @@ class SyncService {
       return (data as List).map((json) => Baby.fromJson(json)).toList();
     } catch (e) {
       debugPrint('[SyncService] Failed to load babies: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
-        'operation': 'load_babies',
-        'error': e.toString(),
-      });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'load_babies', 'error': e.toString()},
+      );
       return [];
     }
   }
@@ -156,10 +157,11 @@ class SyncService {
       await _client.from('events').upsert(_eventToJson(event));
     } catch (e) {
       debugPrint('[SyncService] Failed to sync event: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
-        'operation': 'sync_event',
-        'error': e.toString(),
-      });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'sync_event', 'error': e.toString()},
+      );
     }
   }
 
@@ -169,10 +171,11 @@ class SyncService {
       await _client.from('events').delete().eq('id', eventId);
     } catch (e) {
       debugPrint('[SyncService] Failed to delete event: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
-        'operation': 'delete_event',
-        'error': e.toString(),
-      });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'delete_event', 'error': e.toString()},
+      );
     }
   }
 
@@ -188,11 +191,44 @@ class SyncService {
       return (data as List).map((json) => BabyEvent.fromJson(json)).toList();
     } catch (e) {
       debugPrint('[SyncService] Failed to load events: $e');
-      _analyticsService.log(AnalyticsService.syncFailed, AnalyticsService.error, properties: {
-        'operation': 'load_events',
-        'error': e.toString(),
-      });
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {'operation': 'load_events', 'error': e.toString()},
+      );
       return [];
+    }
+  }
+
+  /// Loads only completed sleep events in the requested time range.
+  /// Returns null when cloud data is unavailable, so callers can use local data.
+  Future<List<BabyEvent>?> loadSleepEventsSince(
+    String babyId,
+    DateTime since,
+  ) async {
+    if (!isLoggedIn) return null;
+    try {
+      final data = await _client
+          .from('events')
+          .select()
+          .eq('baby_id', babyId)
+          .eq('user_id', _userId!)
+          .eq('type', 'sleep')
+          .gte('start_time', since.toUtc().toIso8601String())
+          .not('end_time', 'is', null)
+          .order('start_time', ascending: false);
+      return (data as List).map((json) => BabyEvent.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('[SyncService] Failed to load sleep events: $e');
+      _analyticsService.log(
+        AnalyticsService.syncFailed,
+        AnalyticsService.error,
+        properties: {
+          'operation': 'load_sleep_events_since',
+          'error': e.toString(),
+        },
+      );
+      return null;
     }
   }
 }

@@ -250,6 +250,7 @@ class _DiaperSheetState extends State<DiaperSheet> {
   }
 
   void _save() {
+    final strings = context.read<LocaleProvider>().strings;
     if (widget.event != null && widget.onUpdateDiaper != null) {
       final updated = widget.event!.copyWith(
         hasPee: _hasPee,
@@ -263,7 +264,7 @@ class _DiaperSheetState extends State<DiaperSheet> {
         context,
         icon: Icons.baby_changing_station_outlined,
         color: AppColors.diaperTeal,
-        title: 'Diaper updated',
+        title: strings.diaperUpdated,
         subtitle: _getDiaperLabel(),
       );
     } else {
@@ -286,16 +287,17 @@ class _DiaperSheetState extends State<DiaperSheet> {
         context,
         icon: Icons.baby_changing_station_outlined,
         color: AppColors.diaperTeal,
-        title: 'Diaper logged',
+        title: strings.diaperLogged,
         subtitle: _getDiaperLabel(),
       );
     }
   }
 
   String _getDiaperLabel() {
-    if (_hasPee && _hasPoop) return 'Pee & Poop';
-    if (_hasPee) return 'Pee';
-    return 'Poop';
+    final strings = context.read<LocaleProvider>().strings;
+    if (_hasPee && _hasPoop) return strings.peeAndPoop;
+    if (_hasPee) return strings.pee;
+    return strings.poop;
   }
 }
 

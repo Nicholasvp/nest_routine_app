@@ -137,14 +137,15 @@ class AnalyticsService {
       final userId = _authService.userId;
       final appVersion = await _resolveAppVersion();
       await _client.from('analytics_events').insert({
-        if (userId != null) 'user_id': userId,
+        'user_id': ?userId,
         'session_id': sessionId,
         'event_name': eventName,
         'event_category': category,
-        if (properties != null && properties.isNotEmpty) 'properties': properties,
+        if (properties != null && properties.isNotEmpty)
+          'properties': properties,
         'platform': defaultTargetPlatform.name,
-        if (appVersion != null) 'app_version': appVersion,
-        if (durationMs != null) 'duration_ms': durationMs,
+        'app_version': ?appVersion,
+        'duration_ms': ?durationMs,
       });
     } catch (e) {
       debugPrint('[Analytics] Failed to log $eventName: $e');

@@ -76,7 +76,9 @@ class MetaAdsService {
     try {
       await _fb.setAutoLogAppEventsEnabled(true);
       await _fb.activateApp();
-      debugPrint('[MetaAds] SDK ativado (app $appId, advertiserTracking=$granted)');
+      debugPrint(
+        '[MetaAds] SDK ativado (app $appId, advertiserTracking=$granted)',
+      );
     } catch (e) {
       debugPrint('[MetaAds] Falha ao ativar: $e');
     }
@@ -96,9 +98,10 @@ class MetaAdsService {
   }
 
   Future<void> logSignUp({String method = 'email'}) {
-    return _run('completedRegistration', () => _fb.logCompletedRegistration(
-          registrationMethod: method,
-        ));
+    return _run(
+      'completedRegistration',
+      () => _fb.logCompletedRegistration(registrationMethod: method),
+    );
   }
 
   Future<void> logCompletedTutorial() {
@@ -144,7 +147,7 @@ class MetaAdsService {
         parameters: {
           FacebookAppEvents.paramNameContentId: contentId,
           FacebookAppEvents.paramNameContentType: _contentTypeSubscription,
-          if (orderId != null) FacebookAppEvents.paramNameOrderId: orderId,
+          FacebookAppEvents.paramNameOrderId: ?orderId,
         },
       );
 

@@ -21,6 +21,7 @@ class PaywallTriggerPoint {
   static const appColdStart = 'app_cold_start';
   static const appResume = 'app_resume';
   static const homeBanner = 'home_banner';
+  static const homeRoutineGate = 'home_routine_gate';
   static const insightsGate = 'insights_gate';
   static const insightsTabOpen = 'insights_tab_open';
   static const eventLogged = 'event_logged';
@@ -66,7 +67,9 @@ class PaywallService {
     // Leituras de provider ficam antes de qualquer await para nao guardar
     // BuildContext atraves de gaps assincronos.
     final subscription = context.read<SubscriptionProvider>();
-    final analytics = AnalyticsService(context.read<AuthProvider>().authService);
+    final analytics = AnalyticsService(
+      context.read<AuthProvider>().authService,
+    );
     final isPortuguese = context.read<LocaleProvider>().isPortuguese;
 
     if (subscription.isPro) {
@@ -85,16 +88,19 @@ class PaywallService {
           sleepTimerActive: sleepTimerActive,
         )) {
       debugPrint(
-          '[PaywallService] Bloqueado trigger=$trigger motivo=${PaywallTriggerService.lastBlockReason} '
-          '(dispensas=${PaywallTriggerService.dismissCount}, eventosDesdeUltimo=${PaywallTriggerService.eventsSinceLastPaywall})');
-      unawaited(analytics.log(
-        AnalyticsService.paywallThrottled,
-        AnalyticsService.paywall,
-        properties: {
-          'trigger': trigger,
-          'reason': PaywallTriggerService.lastBlockReason,
-        },
-      ));
+        '[PaywallService] Bloqueado trigger=$trigger motivo=${PaywallTriggerService.lastBlockReason} '
+        '(dispensas=${PaywallTriggerService.dismissCount}, eventosDesdeUltimo=${PaywallTriggerService.eventsSinceLastPaywall})',
+      );
+      unawaited(
+        analytics.log(
+          AnalyticsService.paywallThrottled,
+          AnalyticsService.paywall,
+          properties: {
+            'trigger': trigger,
+            'reason': PaywallTriggerService.lastBlockReason,
+          },
+        ),
+      );
       return PaywallOutcome.throttled;
     }
 
@@ -105,8 +111,11 @@ class PaywallService {
       'dismiss_count': dismissCount,
     };
 
-    await analytics.log(AnalyticsService.paywallShown, AnalyticsService.paywall,
-        properties: properties);
+    await analytics.log(
+      AnalyticsService.paywallShown,
+      AnalyticsService.paywall,
+      properties: properties,
+    );
 
     PaywallTriggerService.recordShown();
     await _logCheckoutStarted(subscription);
@@ -125,7 +134,8 @@ class PaywallService {
       stopwatch.stop();
       final elapsed = stopwatch.elapsed;
       debugPrint(
-          '[PaywallService] trigger=$trigger resultado=$result em ${elapsed.inMilliseconds}ms');
+        '[PaywallService] trigger=$trigger resultado=$result em ${elapsed.inMilliseconds}ms',
+      );
 
       final outcome = await _handleResult(
         analytics: analytics,
@@ -210,7 +220,8 @@ class PaywallService {
 
   /// Melhor pacote para mensurar checkout no Meta: anual quando existir.
   static Package? _featuredPackage(SubscriptionProvider subscription) {
-    final packages = subscription.offerings?.current?.availablePackages ?? const [];
+    final packages =
+        subscription.offerings?.current?.availablePackages ?? const [];
     if (packages.isEmpty) return null;
     return packages.firstWhere(
       (p) => p.identifier.contains('yearly'),
@@ -218,7 +229,9 @@ class PaywallService {
     );
   }
 
-  static Future<void> _logCheckoutStarted(SubscriptionProvider subscription) async {
+  static Future<void> _logCheckoutStarted(
+    SubscriptionProvider subscription,
+  ) async {
     final pkg = _featuredPackage(subscription);
     if (pkg == null) return;
     await MetaAdsService.instance.logInitiatedCheckout(

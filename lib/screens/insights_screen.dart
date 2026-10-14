@@ -15,6 +15,7 @@ import '../theme/app_colors.dart';
 import '../utils/date_utils.dart';
 import '../utils/prediction_engine.dart';
 import '../utils/strings.dart';
+import '../utils/sleep_routine.dart';
 
 class InsightsScreen extends StatefulWidget {
   /// Indica que a aba foi selecionada. O MainShell passa isso porque o
@@ -51,7 +52,8 @@ class _InsightsScreenState extends State<InsightsScreen>
   /// caminho manual para o usuario.
   Future<void> _maybePresentPaywall() async {
     if (context.read<SubscriptionProvider>().isPro) return;
-    final sleepTimerActive = context.read<EventProvider>().activeSleepTimer != null;
+    final sleepTimerActive =
+        context.read<EventProvider>().activeSleepTimer != null;
 
     // Espera o frame da troca de aba terminar antes de abrir o modal.
     await Future<void>.delayed(const Duration(milliseconds: 350));
@@ -96,8 +98,11 @@ class _InsightsScreenState extends State<InsightsScreen>
         title: Text(strings.analytics),
         leading: GestureDetector(
           onTap: () => NavigationService.goToHome(),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.textSecondary, size: 20),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textSecondary,
+            size: 20,
+          ),
         ),
       ),
       body: Column(
@@ -111,16 +116,34 @@ class _InsightsScreenState extends State<InsightsScreen>
             tabs: [
               Tab(icon: Icon(Icons.bedtime_outlined), text: strings.sleep),
               Tab(icon: Icon(Icons.local_dining_outlined), text: strings.feed),
-              Tab(icon: Icon(Icons.cleaning_services_outlined), text: strings.diaper),
+              Tab(
+                icon: Icon(Icons.cleaning_services_outlined),
+                text: strings.diaper,
+              ),
             ],
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
-                _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
-                _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
+                _SleepTab(
+                  baby: baby,
+                  eventProvider: eventProvider,
+                  days: _selectedDays,
+                  isPt: isPt,
+                ),
+                _FeedTab(
+                  baby: baby,
+                  eventProvider: eventProvider,
+                  days: _selectedDays,
+                  isPt: isPt,
+                ),
+                _DiaperTab(
+                  baby: baby,
+                  eventProvider: eventProvider,
+                  days: _selectedDays,
+                  isPt: isPt,
+                ),
               ],
             ),
           ),
@@ -129,14 +152,23 @@ class _InsightsScreenState extends State<InsightsScreen>
     );
   }
 
-  Widget _buildProGate(BuildContext context, Baby baby, EventProvider eventProvider, Strings strings, bool isPt) {
+  Widget _buildProGate(
+    BuildContext context,
+    Baby baby,
+    EventProvider eventProvider,
+    Strings strings,
+    bool isPt,
+  ) {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.analytics),
         leading: GestureDetector(
           onTap: () => NavigationService.goToHome(),
-          child: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: AppColors.textSecondary, size: 20),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textSecondary,
+            size: 20,
+          ),
         ),
       ),
       body: Stack(
@@ -155,18 +187,42 @@ class _InsightsScreenState extends State<InsightsScreen>
                       labelColor: AppColors.sleepPurple,
                       unselectedLabelColor: AppColors.textTertiary,
                       tabs: [
-                        Tab(icon: Icon(Icons.bedtime_outlined), text: strings.sleep),
-                        Tab(icon: Icon(Icons.local_dining_outlined), text: strings.feed),
-                        Tab(icon: Icon(Icons.cleaning_services_outlined), text: strings.diaper),
+                        Tab(
+                          icon: Icon(Icons.bedtime_outlined),
+                          text: strings.sleep,
+                        ),
+                        Tab(
+                          icon: Icon(Icons.local_dining_outlined),
+                          text: strings.feed,
+                        ),
+                        Tab(
+                          icon: Icon(Icons.cleaning_services_outlined),
+                          text: strings.diaper,
+                        ),
                       ],
                     ),
                     Expanded(
                       child: TabBarView(
                         controller: _tabController,
                         children: [
-                          _SleepTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
-                          _FeedTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
-                          _DiaperTab(baby: baby, eventProvider: eventProvider, days: _selectedDays, isPt: isPt),
+                          _SleepTab(
+                            baby: baby,
+                            eventProvider: eventProvider,
+                            days: _selectedDays,
+                            isPt: isPt,
+                          ),
+                          _FeedTab(
+                            baby: baby,
+                            eventProvider: eventProvider,
+                            days: _selectedDays,
+                            isPt: isPt,
+                          ),
+                          _DiaperTab(
+                            baby: baby,
+                            eventProvider: eventProvider,
+                            days: _selectedDays,
+                            isPt: isPt,
+                          ),
                         ],
                       ),
                     ),
@@ -175,9 +231,7 @@ class _InsightsScreenState extends State<InsightsScreen>
               ),
             ),
           ),
-          Center(
-            child: _buildProOverlayCard(context, strings),
-          ),
+          Center(child: _buildProOverlayCard(context, strings)),
         ],
       ),
     );
@@ -190,9 +244,7 @@ class _InsightsScreenState extends State<InsightsScreen>
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.sleepPurple.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppColors.sleepPurple.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.5),
@@ -281,8 +333,9 @@ class _InsightsScreenState extends State<InsightsScreen>
                   color: _selectedDays == days
                       ? AppColors.sleepPurple
                       : AppColors.textSecondary,
-                  fontWeight:
-                      _selectedDays == days ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: _selectedDays == days
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                   fontSize: 13,
                 ),
                 side: BorderSide(
@@ -318,18 +371,24 @@ class _SleepTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sleepHours =
-        eventProvider.getSleepHoursPerDay(baby.id, days: days);
+    final sleepHours = eventProvider.getSleepHoursPerDay(baby.id, days: days);
     final avgSleep = eventProvider.getAverageSleepPerDay(baby.id, days: days);
     final todaySleep = eventProvider.getTotalSleepToday(baby.id);
     final nextNap = eventProvider.predictNextNap(baby.id);
     final cutoff = DateTime.now().subtract(Duration(days: days));
     final sleepEvents = eventProvider
         .getSleepEvents(baby.id)
-        .where((e) => e.endTime != null && e.startTime.isAfter(cutoff))
+        .where(
+          (e) =>
+              e.endTime != null &&
+              e.startTime.isAfter(cutoff) &&
+              e.duration != null &&
+              e.duration!.inMinutes > 0 &&
+              e.duration!.inMinutes <= 12 * 60,
+        )
         .toList();
-    final avgNapCount =
-        sleepEvents.isEmpty ? 0 : sleepEvents.length / days;
+    final commonRoutine = findCommonSleepRoutine(sleepEvents);
+    final avgNapCount = sleepEvents.isEmpty ? 0 : sleepEvents.length / days;
     final strings = context.read<LocaleProvider>().strings;
 
     return SingleChildScrollView(
@@ -356,24 +415,122 @@ class _SleepTab extends StatelessWidget {
               color: AppColors.wakeYellow,
             ),
           ]),
+          if (commonRoutine.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _buildCommonSleepRoutine(context, commonRoutine),
+          ],
           const SizedBox(height: 16),
           _buildSleepChart(context, sleepHours, avgSleep, baby.ageInMonths),
           const SizedBox(height: 16),
           _buildAgeComparison(context, baby.ageInMonths, avgSleep),
           const SizedBox(height: 16),
-          _buildPredictionCard(context, nextNap, strings.nextNapLabel,
-              Icons.nightlight_round, AppColors.sleepPurple),
+          _buildPredictionCard(
+            context,
+            nextNap,
+            strings.nextNapLabel,
+            Icons.nightlight_round,
+            AppColors.sleepPurple,
+          ),
           const SizedBox(height: 80),
         ],
       ),
     );
   }
 
-  Widget _buildSleepChart(BuildContext context,
-      Map<DateTime, double> sleepHours, double avgSleep, int ageMonths) {
+  Widget _buildCommonSleepRoutine(
+    BuildContext context,
+    List<SleepRoutineTime> routine,
+  ) {
+    final strings = context.read<LocaleProvider>().strings;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            strings.commonSleepRoutine,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            strings.basedOnSleepHistory,
+            style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          ...routine.map((item) {
+            final label =
+                item.minuteOfDay >= 18 * 60 || item.minuteOfDay < 5 * 60
+                ? strings.nightSleep
+                : item.minuteOfDay < 11 * 60
+                ? strings.morningNap
+                : item.minuteOfDay < 16 * 60
+                ? strings.afternoonNap
+                : strings.eveningNap;
+            final time = DateTime(
+              2000,
+              1,
+              1,
+              item.minuteOfDay ~/ 60,
+              item.minuteOfDay % 60,
+            );
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.bedtime_outlined,
+                    color: AppColors.sleepPurple,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    DateFormat(
+                      isPt ? 'HH:mm' : 'h:mm a',
+                      isPt ? 'pt_BR' : 'en',
+                    ).format(time),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleepChart(
+    BuildContext context,
+    Map<DateTime, double> sleepHours,
+    double avgSleep,
+    int ageMonths,
+  ) {
     final entries = sleepHours.entries.toList();
     final maxSleep = entries.fold<double>(
-        0, (max, e) => e.value > max ? e.value : max);
+      0,
+      (max, e) => e.value > max ? e.value : max,
+    );
     final chartMax = (maxSleep < 24 ? 24 : maxSleep).ceilToDouble();
     final strings = context.read<LocaleProvider>().strings;
 
@@ -392,16 +549,17 @@ class _SleepTab extends StatelessWidget {
             children: [
               Text(
                 strings.sleepHours,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
                 strings.avgLabel('${avgSleep.round()}h'),
                 style: const TextStyle(
-                    color: AppColors.sleepPurple,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
+                  color: AppColors.sleepPurple,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -420,7 +578,9 @@ class _SleepTab extends StatelessWidget {
                       return BarTooltipItem(
                         '${AppDateUtils.formatDate(day, isPt: isPt)}\n${rod.toY.toStringAsFixed(1)}h',
                         const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 12),
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                        ),
                       );
                     },
                   ),
@@ -437,9 +597,14 @@ class _SleepTab extends StatelessWidget {
                         }
                         final day = entries[value.toInt()].key;
                         return Text(
-                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(day).substring(0, 2),
+                          DateFormat(
+                            'E',
+                            isPt ? 'pt_BR' : 'en',
+                          ).format(day).substring(0, 2),
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 10),
+                            color: AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
                         );
                       },
                     ),
@@ -452,15 +617,19 @@ class _SleepTab extends StatelessWidget {
                         return Text(
                           '${value.toInt()}h',
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 10),
+                            color: AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
                         );
                       },
                     ),
                   ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: FlGridData(
                   show: true,
@@ -481,7 +650,8 @@ class _SleepTab extends StatelessWidget {
                         color: AppColors.sleepPurple,
                         width: 16,
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4)),
+                          top: Radius.circular(4),
+                        ),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: chartMax,
@@ -497,15 +667,21 @@ class _SleepTab extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.info_outline,
-                  size: 14,
-                  color: AppColors.textTertiary.withValues(alpha: 0.6)),
+              Icon(
+                Icons.info_outline,
+                size: 14,
+                color: AppColors.textTertiary.withValues(alpha: 0.6),
+              ),
               const SizedBox(width: 6),
               Text(
-                strings.recommendedSleepFor(baby.ageInMonths, _recommendedSleep(baby.ageInMonths)),
+                strings.recommendedSleepFor(
+                  baby.ageInMonths,
+                  _recommendedSleep(baby.ageInMonths),
+                ),
                 style: TextStyle(
-                    color: AppColors.textTertiary.withValues(alpha: 0.7),
-                    fontSize: 11),
+                  color: AppColors.textTertiary.withValues(alpha: 0.7),
+                  fontSize: 11,
+                ),
               ),
             ],
           ),
@@ -515,7 +691,10 @@ class _SleepTab extends StatelessWidget {
   }
 
   Widget _buildAgeComparison(
-      BuildContext context, int ageMonths, double avgSleep) {
+    BuildContext context,
+    int ageMonths,
+    double avgSleep,
+  ) {
     final recommended = _recommendedSleep(ageMonths);
     final diff = avgSleep - recommended;
     final isGood = diff.abs() < 2;
@@ -552,15 +731,24 @@ class _SleepTab extends StatelessWidget {
                 Text(
                   strings.vsRecommendedSleep,
                   style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 13),
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   isGood
                       ? strings.sleepingWell(recommended.round(), ageMonths)
-                      : strings.sleepingOff(avgSleep.round(), recommended.round(), ageMonths),
+                      : strings.sleepingOff(
+                          avgSleep.round(),
+                          recommended.round(),
+                          ageMonths,
+                        ),
                   style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13, height: 1.3),
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -570,8 +758,13 @@ class _SleepTab extends StatelessWidget {
     );
   }
 
-  Widget _buildPredictionCard(BuildContext context, PredictionResult prediction,
-      String label, IconData icon, Color color) {
+  Widget _buildPredictionCard(
+    BuildContext context,
+    PredictionResult prediction,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     final strings = context.read<LocaleProvider>().strings;
     return Container(
       padding: const EdgeInsets.all(20),
@@ -596,9 +789,13 @@ class _SleepTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   prediction.timeUntilLabel(strings.noPrediction, strings.late),
@@ -609,9 +806,13 @@ class _SleepTab extends StatelessWidget {
                   ),
                 ),
                 if (prediction.confidencePercent > 0)
-                  Text(strings.confidence(prediction.confidencePercent),
-                      style: const TextStyle(
-                          color: AppColors.textTertiary, fontSize: 11)),
+                  Text(
+                    strings.confidence(prediction.confidencePercent),
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -650,14 +851,14 @@ class _FeedTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final feedCount = eventProvider.getFeedCountByDay(baby.id, days: days);
     final avgFeeds = eventProvider.getAverageFeedsPerDay(baby.id, days: days);
-    final avgInterval =
-        eventProvider.getAverageFeedInterval(baby.id, days: days);
+    final avgInterval = eventProvider.getAverageFeedInterval(
+      baby.id,
+      days: days,
+    );
     final breastRatio = eventProvider.getBreastFeedRatio(baby.id, days: days);
-    final sideDist =
-        eventProvider.getFeedSideDistribution(baby.id, days: days);
+    final sideDist = eventProvider.getFeedSideDistribution(baby.id, days: days);
     final nextFeed = eventProvider.predictNextFeed(baby.id);
-    final volumeByDay =
-        eventProvider.getFeedVolumeByDay(baby.id, days: days);
+    final volumeByDay = eventProvider.getFeedVolumeByDay(baby.id, days: days);
     final hasVolume = volumeByDay.values.any((v) => v > 0);
     final strings = context.read<LocaleProvider>().strings;
 
@@ -694,8 +895,13 @@ class _FeedTab extends StatelessWidget {
           ],
           _buildSideDistribution(context, sideDist),
           const SizedBox(height: 16),
-          _buildPredictionCard(context, nextFeed, strings.nextFeedLabel,
-              Icons.local_dining_outlined, AppColors.feedOrange),
+          _buildPredictionCard(
+            context,
+            nextFeed,
+            strings.nextFeedLabel,
+            Icons.local_dining_outlined,
+            AppColors.feedOrange,
+          ),
           const SizedBox(height: 80),
         ],
       ),
@@ -703,9 +909,15 @@ class _FeedTab extends StatelessWidget {
   }
 
   Widget _buildFeedCountChart(
-      BuildContext context, Map<DateTime, int> feedCount, double avg) {
+    BuildContext context,
+    Map<DateTime, int> feedCount,
+    double avg,
+  ) {
     final entries = feedCount.entries.toList();
-    final maxCount = entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
+    final maxCount = entries.fold<int>(
+      0,
+      (max, e) => e.value > max ? e.value : max,
+    );
     final chartMax = (maxCount < 8 ? 8 : maxCount).toDouble();
     final strings = context.read<LocaleProvider>().strings;
 
@@ -724,16 +936,17 @@ class _FeedTab extends StatelessWidget {
             children: [
               Text(
                 strings.feedsPerDay,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
                 strings.avgLabel(avg.toStringAsFixed(1)),
                 style: const TextStyle(
-                    color: AppColors.feedOrange,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
+                  color: AppColors.feedOrange,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -752,7 +965,9 @@ class _FeedTab extends StatelessWidget {
                       return BarTooltipItem(
                         '${AppDateUtils.formatDate(day, isPt: isPt)}\n${strings.feedsCount(rod.toY.toInt())}',
                         const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 12),
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                        ),
                       );
                     },
                   ),
@@ -769,9 +984,14 @@ class _FeedTab extends StatelessWidget {
                         }
                         final day = entries[value.toInt()].key;
                         return Text(
-                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(day).substring(0, 2),
+                          DateFormat(
+                            'E',
+                            isPt ? 'pt_BR' : 'en',
+                          ).format(day).substring(0, 2),
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 10),
+                            color: AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
                         );
                       },
                     ),
@@ -784,15 +1004,19 @@ class _FeedTab extends StatelessWidget {
                         return Text(
                           '${value.toInt()}',
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 10),
+                            color: AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
                         );
                       },
                     ),
                   ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: FlGridData(
                   show: true,
@@ -813,7 +1037,8 @@ class _FeedTab extends StatelessWidget {
                         color: AppColors.feedOrange,
                         width: 16,
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4)),
+                          top: Radius.circular(4),
+                        ),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: chartMax,
@@ -832,9 +1057,14 @@ class _FeedTab extends StatelessWidget {
   }
 
   Widget _buildVolumeChart(
-      BuildContext context, Map<DateTime, int> volumeByDay) {
+    BuildContext context,
+    Map<DateTime, int> volumeByDay,
+  ) {
     final entries = volumeByDay.entries.toList();
-    final maxVol = entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
+    final maxVol = entries.fold<int>(
+      0,
+      (max, e) => e.value > max ? e.value : max,
+    );
     final strings = context.read<LocaleProvider>().strings;
 
     return Container(
@@ -849,9 +1079,9 @@ class _FeedTab extends StatelessWidget {
         children: [
           Text(
             strings.milkVolumePerDay,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -868,7 +1098,9 @@ class _FeedTab extends StatelessWidget {
                       return BarTooltipItem(
                         '${AppDateUtils.formatDate(day, isPt: isPt)}\n${rod.toY.toInt()}ml',
                         const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 12),
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                        ),
                       );
                     },
                   ),
@@ -884,9 +1116,14 @@ class _FeedTab extends StatelessWidget {
                           return const SizedBox.shrink();
                         }
                         return Text(
-                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(entries[value.toInt()].key).substring(0, 2),
+                          DateFormat(
+                            'E',
+                            isPt ? 'pt_BR' : 'en',
+                          ).format(entries[value.toInt()].key).substring(0, 2),
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 9),
+                            color: AppColors.textTertiary,
+                            fontSize: 9,
+                          ),
                         );
                       },
                     ),
@@ -899,15 +1136,19 @@ class _FeedTab extends StatelessWidget {
                         return Text(
                           '${value.toInt()}ml',
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 9),
+                            color: AppColors.textTertiary,
+                            fontSize: 9,
+                          ),
                         );
                       },
                     ),
                   ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: FlGridData(
                   show: true,
@@ -927,7 +1168,8 @@ class _FeedTab extends StatelessWidget {
                         color: AppColors.wakeYellow,
                         width: 16,
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4)),
+                          top: Radius.circular(4),
+                        ),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: (maxVol < 200 ? 200 : maxVol).toDouble(),
@@ -946,7 +1188,9 @@ class _FeedTab extends StatelessWidget {
   }
 
   Widget _buildSideDistribution(
-      BuildContext context, Map<FeedSide, int> sides) {
+    BuildContext context,
+    Map<FeedSide, int> sides,
+  ) {
     final total = sides.values.fold(0, (a, b) => a + b);
     if (total == 0) return const SizedBox.shrink();
     final strings = context.read<LocaleProvider>().strings;
@@ -963,21 +1207,36 @@ class _FeedTab extends StatelessWidget {
         children: [
           Text(
             strings.breastfeedingSideDistribution,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildSideItem(context, strings.left, sides[FeedSide.left] ?? 0, total,
-                  AppColors.feedOrange),
+              _buildSideItem(
+                context,
+                strings.left,
+                sides[FeedSide.left] ?? 0,
+                total,
+                AppColors.feedOrange,
+              ),
               const SizedBox(width: 12),
-              _buildSideItem(context, strings.right, sides[FeedSide.right] ?? 0,
-                  total, AppColors.wakeYellow),
+              _buildSideItem(
+                context,
+                strings.right,
+                sides[FeedSide.right] ?? 0,
+                total,
+                AppColors.wakeYellow,
+              ),
               const SizedBox(width: 12),
-              _buildSideItem(context, strings.both, sides[FeedSide.both] ?? 0, total,
-                  AppColors.sleepPurple),
+              _buildSideItem(
+                context,
+                strings.both,
+                sides[FeedSide.both] ?? 0,
+                total,
+                AppColors.sleepPurple,
+              ),
             ],
           ),
         ],
@@ -985,8 +1244,13 @@ class _FeedTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSideItem(BuildContext context, String label, int count,
-      int total, Color color) {
+  Widget _buildSideItem(
+    BuildContext context,
+    String label,
+    int count,
+    int total,
+    Color color,
+  ) {
     final pct = total > 0 ? (count / total * 100).round() : 0;
     final strings = context.read<LocaleProvider>().strings;
     return Expanded(
@@ -1007,20 +1271,33 @@ class _FeedTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(label,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 11)),
-            Text(strings.feedsCount(count),
-                style: const TextStyle(
-                    color: AppColors.textTertiary, fontSize: 10)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+            Text(
+              strings.feedsCount(count),
+              style: const TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPredictionCard(BuildContext context, PredictionResult prediction,
-      String label, IconData icon, Color color) {
+  Widget _buildPredictionCard(
+    BuildContext context,
+    PredictionResult prediction,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     final strings = context.read<LocaleProvider>().strings;
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1045,9 +1322,13 @@ class _FeedTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   prediction.timeUntilLabel(strings.noPrediction, strings.late),
@@ -1058,9 +1339,13 @@ class _FeedTab extends StatelessWidget {
                   ),
                 ),
                 if (prediction.confidencePercent > 0)
-                  Text(strings.confidence(prediction.confidencePercent),
-                      style: const TextStyle(
-                          color: AppColors.textTertiary, fontSize: 11)),
+                  Text(
+                    strings.confidence(prediction.confidencePercent),
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1088,15 +1373,20 @@ class _DiaperTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final diaperCount =
-        eventProvider.getDiaperCountByDay(baby.id, days: days);
-    final avgDiapers =
-        eventProvider.getAverageDiapersPerDay(baby.id, days: days);
-    final totalDiapers =
-        eventProvider.getTotalDiaperChanges(baby.id, days: days);
+    final diaperCount = eventProvider.getDiaperCountByDay(baby.id, days: days);
+    final avgDiapers = eventProvider.getAverageDiapersPerDay(
+      baby.id,
+      days: days,
+    );
+    final totalDiapers = eventProvider.getTotalDiaperChanges(
+      baby.id,
+      days: days,
+    );
     final breakdown = eventProvider.getPeePoopBreakdown(baby.id, days: days);
-    final textures =
-        eventProvider.getDiaperTextureDistribution(baby.id, days: days);
+    final textures = eventProvider.getDiaperTextureDistribution(
+      baby.id,
+      days: days,
+    );
     final nextDiaper = eventProvider.predictNextDiaper(baby.id);
     final strings = context.read<LocaleProvider>().strings;
 
@@ -1133,8 +1423,13 @@ class _DiaperTab extends StatelessWidget {
             _buildTextureDistribution(context, textures),
             const SizedBox(height: 16),
           ],
-          _buildPredictionCard(context, nextDiaper, strings.nextDiaperLabel,
-              Icons.cleaning_services_outlined, AppColors.diaperTeal),
+          _buildPredictionCard(
+            context,
+            nextDiaper,
+            strings.nextDiaperLabel,
+            Icons.cleaning_services_outlined,
+            AppColors.diaperTeal,
+          ),
           const SizedBox(height: 80),
         ],
       ),
@@ -1142,9 +1437,15 @@ class _DiaperTab extends StatelessWidget {
   }
 
   Widget _buildDiaperCountChart(
-      BuildContext context, Map<DateTime, int> diaperCount, double avg) {
+    BuildContext context,
+    Map<DateTime, int> diaperCount,
+    double avg,
+  ) {
     final entries = diaperCount.entries.toList();
-    final maxCount = entries.fold<int>(0, (max, e) => e.value > max ? e.value : max);
+    final maxCount = entries.fold<int>(
+      0,
+      (max, e) => e.value > max ? e.value : max,
+    );
     final chartMax = (maxCount < 8 ? 8 : maxCount).toDouble();
     final strings = context.read<LocaleProvider>().strings;
 
@@ -1163,16 +1464,17 @@ class _DiaperTab extends StatelessWidget {
             children: [
               Text(
                 strings.diaperChangesPerDay,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               Text(
                 strings.avgLabel(avg.toStringAsFixed(1)),
                 style: const TextStyle(
-                    color: AppColors.diaperTeal,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600),
+                  color: AppColors.diaperTeal,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -1191,7 +1493,9 @@ class _DiaperTab extends StatelessWidget {
                       return BarTooltipItem(
                         '${AppDateUtils.formatDate(day, isPt: isPt)}\n${strings.changesCount(rod.toY.toInt())}',
                         const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 12),
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                        ),
                       );
                     },
                   ),
@@ -1208,9 +1512,14 @@ class _DiaperTab extends StatelessWidget {
                         }
                         final day = entries[value.toInt()].key;
                         return Text(
-                          DateFormat('E', isPt ? 'pt_BR' : 'en').format(day).substring(0, 2),
+                          DateFormat(
+                            'E',
+                            isPt ? 'pt_BR' : 'en',
+                          ).format(day).substring(0, 2),
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 10),
+                            color: AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
                         );
                       },
                     ),
@@ -1223,15 +1532,19 @@ class _DiaperTab extends StatelessWidget {
                         return Text(
                           '${value.toInt()}',
                           style: const TextStyle(
-                              color: AppColors.textTertiary, fontSize: 10),
+                            color: AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
                         );
                       },
                     ),
                   ),
                   topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 gridData: FlGridData(
                   show: true,
@@ -1252,7 +1565,8 @@ class _DiaperTab extends StatelessWidget {
                         color: AppColors.diaperTeal,
                         width: 16,
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4)),
+                          top: Radius.circular(4),
+                        ),
                         backDrawRodData: BackgroundBarChartRodData(
                           show: true,
                           toY: chartMax,
@@ -1271,7 +1585,9 @@ class _DiaperTab extends StatelessWidget {
   }
 
   Widget _buildPeePoopBreakdown(
-      BuildContext context, (int, int, int) breakdown) {
+    BuildContext context,
+    (int, int, int) breakdown,
+  ) {
     final pee = breakdown.$1;
     final poop = breakdown.$2;
     final both = breakdown.$3;
@@ -1291,9 +1607,9 @@ class _DiaperTab extends StatelessWidget {
         children: [
           Text(
             strings.peeVsPoopBreakdown,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
           ClipRRect(
@@ -1311,9 +1627,10 @@ class _DiaperTab extends StatelessWidget {
                           child: Text(
                             strings.peePercent((pee / total * 100).round()),
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600),
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -1327,9 +1644,10 @@ class _DiaperTab extends StatelessWidget {
                           child: Text(
                             strings.bothPercent((both / total * 100).round()),
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600),
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -1343,9 +1661,10 @@ class _DiaperTab extends StatelessWidget {
                           child: Text(
                             strings.poopPercent((poop / total * 100).round()),
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600),
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -1378,15 +1697,18 @@ class _DiaperTab extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(label,
-            style: const TextStyle(
-                color: AppColors.textTertiary, fontSize: 10)),
+        Text(
+          label,
+          style: const TextStyle(color: AppColors.textTertiary, fontSize: 10),
+        ),
       ],
     );
   }
 
   Widget _buildTextureDistribution(
-      BuildContext context, Map<DiaperTexture, int> textures) {
+    BuildContext context,
+    Map<DiaperTexture, int> textures,
+  ) {
     if (textures.values.every((v) => v == 0)) return const SizedBox.shrink();
     final total = textures.values.fold(0, (a, b) => a + b);
     final strings = context.read<LocaleProvider>().strings;
@@ -1403,9 +1725,9 @@ class _DiaperTab extends StatelessWidget {
         children: [
           Text(
             strings.stoolTexture,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           ...textures.entries.map((e) {
@@ -1419,12 +1741,20 @@ class _DiaperTab extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(label,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 13)),
-                      Text('${e.value} ($pct%)',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 12)),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '${e.value} ($pct%)',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -1432,8 +1762,9 @@ class _DiaperTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: total > 0 ? e.value / total : 0,
-                      backgroundColor:
-                          AppColors.cardBorder.withValues(alpha: 0.2),
+                      backgroundColor: AppColors.cardBorder.withValues(
+                        alpha: 0.2,
+                      ),
                       color: AppColors.diaperTeal,
                       minHeight: 6,
                     ),
@@ -1460,8 +1791,13 @@ class _DiaperTab extends StatelessWidget {
     }
   }
 
-  Widget _buildPredictionCard(BuildContext context, PredictionResult prediction,
-      String label, IconData icon, Color color) {
+  Widget _buildPredictionCard(
+    BuildContext context,
+    PredictionResult prediction,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     final strings = context.read<LocaleProvider>().strings;
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1486,9 +1822,13 @@ class _DiaperTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   prediction.timeUntilLabel(strings.noPrediction, strings.late),
@@ -1499,9 +1839,13 @@ class _DiaperTab extends StatelessWidget {
                   ),
                 ),
                 if (prediction.confidencePercent > 0)
-                  Text(strings.confidence(prediction.confidencePercent),
-                      style: const TextStyle(
-                          color: AppColors.textTertiary, fontSize: 11)),
+                  Text(
+                    strings.confidence(prediction.confidencePercent),
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 11,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1539,8 +1883,9 @@ Widget _buildSummaryRow(BuildContext context, List<_MetricData> metrics) {
             decoration: BoxDecoration(
               color: AppColors.cardDark,
               borderRadius: BorderRadius.circular(16),
-              border:
-                  Border.all(color: AppColors.cardBorder.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: AppColors.cardBorder.withValues(alpha: 0.3),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1558,7 +1903,9 @@ Widget _buildSummaryRow(BuildContext context, List<_MetricData> metrics) {
                 Text(
                   m.label,
                   style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 10),
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
                 ),
               ],
             ),

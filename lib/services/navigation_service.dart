@@ -11,5 +11,6 @@ class NavigationService {
   static void goToHome() => tabIndex.value = 0;
   static void goToHistory() => tabIndex.value = 1;
   static void goToInsights() => tabIndex.value = 2;
-  static void goToProfile() => tabIndex.value = 3;
+  static void goToTips() => tabIndex.value = 3;
+  static void goToProfile() => tabIndex.value = 4;
 }

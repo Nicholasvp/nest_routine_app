@@ -5,7 +5,7 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static const String fontFamily = 'Inter';
+  static const String fontFamily = 'Nunito';
 
   static const TextTheme _baseTextTheme = TextTheme(
     displayLarge: TextStyle(
@@ -69,7 +69,7 @@ class AppTheme {
   );
 
   static ThemeData get darkTheme {
-    final textTheme = GoogleFonts.interTextTheme(_baseTextTheme);
+    final textTheme = GoogleFonts.nunitoTextTheme(_baseTextTheme);
 
     return ThemeData(
       brightness: Brightness.dark,
@@ -105,7 +105,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.cardDark,
-        contentTextStyle: GoogleFonts.inter(color: AppColors.textPrimary),
+        contentTextStyle: GoogleFonts.nunito(color: AppColors.textPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         behavior: SnackBarBehavior.floating,
       ),
@@ -117,7 +117,7 @@ class AppTheme {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.nunito(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
@@ -142,8 +142,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.sleepPurple),
         ),
-        labelStyle: GoogleFonts.inter(color: AppColors.textSecondary),
-        hintStyle: GoogleFonts.inter(color: AppColors.textTertiary),
+        labelStyle: GoogleFonts.nunito(color: AppColors.textSecondary),
+        hintStyle: GoogleFonts.nunito(color: AppColors.textTertiary),
       ),
     );
   }

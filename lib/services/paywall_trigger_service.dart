@@ -24,10 +24,6 @@ class PaywallTriggerService {
   /// 1 = so a partir do segundo dia de uso.
   static const int graceDays = 1;
 
-  /// A partir desse numero de dispensas o paywall automatico e desligado;
-  /// so resta o caminho manual.
-  static const int maxDismissCount = 3;
-
   /// Eventos registrados desde a ultima tentativa antes de considerar o
   /// gatilho de "criacao de evento". Evita abrir o paywall no primeiro
   /// registro do usuario e limita a quantidade de tentativas por dia.
@@ -78,9 +74,8 @@ class PaywallTriggerService {
     return DateTime.tryParse(raw);
   }
 
-  /// Intervalo exigido cresce conforme o usuario dispensa o paywall.
-  static Duration get currentInterval =>
-      baseInterval * (dismissCount + 1).clamp(1, 4);
+  /// Fechar o paywall nao aumenta a espera para a proxima apresentacao.
+  static Duration get currentInterval => baseInterval;
 
   static String _todayKey() {
     final now = DateTime.now();
@@ -108,11 +103,6 @@ class PaywallTriggerService {
 
     if (!_ready) {
       _lastBlockReason = 'storage_not_ready';
-      return false;
-    }
-
-    if (dismissCount >= maxDismissCount) {
-      _lastBlockReason = 'too_many_dismissals';
       return false;
     }
 

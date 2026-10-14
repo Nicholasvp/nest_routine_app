@@ -20,6 +20,7 @@ import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/insights_screen.dart';
+import 'screens/tips_screen.dart';
 
 import 'screens/profile_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -90,34 +91,32 @@ void main() async {
   await ReviewService.init();
   await PaywallTriggerService.init();
 
-  await NotificationService.initialize(
-    onTap: _handleNotificationTap,
-  );
+  await NotificationService.initialize(onTap: _handleNotificationTap);
   try {
     final isProduction = !kDebugMode;
     final revenueCatKey = isProduction
         ? (Platform.isAndroid
-            ? dotenv.env['REVENUECAT_ANDROID_API_KEY_PROD']
-            : dotenv.env['REVENUECAT_IOS_API_KEY_PROD'])
+              ? dotenv.env['REVENUECAT_ANDROID_API_KEY_PROD']
+              : dotenv.env['REVENUECAT_IOS_API_KEY_PROD'])
         : (Platform.isAndroid
-            ? dotenv.env['REVENUECAT_ANDROID_API_KEY_DEV']
-            : dotenv.env['REVENUECAT_IOS_API_KEY_DEV']);
+              ? dotenv.env['REVENUECAT_ANDROID_API_KEY_DEV']
+              : dotenv.env['REVENUECAT_IOS_API_KEY_DEV']);
 
     if (revenueCatKey == null || revenueCatKey.isEmpty) {
       debugPrint(
-          '[RevenueCat] ⚠️ No API key configured for ${Platform.operatingSystem} (${isProduction ? 'PRODUCTION' : 'SANDBOX'}) - purchases disabled');
+        '[RevenueCat] ⚠️ No API key configured for ${Platform.operatingSystem} (${isProduction ? 'PRODUCTION' : 'SANDBOX'}) - purchases disabled',
+      );
     } else {
       debugPrint(
-          '[RevenueCat] Using ${Platform.operatingSystem} ${isProduction ? "PRODUCTION" : "SANDBOX"} key');
+        '[RevenueCat] Using ${Platform.operatingSystem} ${isProduction ? "PRODUCTION" : "SANDBOX"} key',
+      );
       await PurchaseService.initialize(apiKey: revenueCatKey);
     }
   } catch (e) {
     debugPrint('RevenueCat init failed: $e');
   }
 
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   runApp(const NestRoutineApp());
 }
 
@@ -130,30 +129,38 @@ class NestRoutineApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) {
-          final provider = BabyProvider();
-          provider.loadBabies();
-          return provider;
-        }),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = BabyProvider();
+            provider.loadBabies();
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => EventProvider()),
-        ChangeNotifierProvider(create: (_) {
-          final provider = LocaleProvider();
-          provider.loadLocale();
-          return provider;
-        }),
-        ChangeNotifierProvider(create: (_) {
-          final provider = NotificationProvider();
-          provider.loadSettings();
-          return provider;
-        }),
-        ChangeNotifierProvider(create: (_) {
-          final provider = SubscriptionProvider();
-          provider.initialize();
-          Purchases.addCustomerInfoUpdateListener((info) {
-            provider.updateFromCustomerInfo(info);
-          });
-          return provider;
-        }),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = LocaleProvider();
+            provider.loadLocale();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = NotificationProvider();
+            provider.loadSettings();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final provider = SubscriptionProvider();
+            provider.initialize();
+            Purchases.addCustomerInfoUpdateListener((info) {
+              provider.updateFromCustomerInfo(info);
+            });
+            return provider;
+          },
+        ),
       ],
       child: const _AppNavigator(),
     );
@@ -212,7 +219,10 @@ class _AppNavigatorState extends State<_AppNavigator> {
   }
 
   void _syncDataFromCloud(
-      AuthProvider authProvider, BabyProvider babyProvider, EventProvider eventProvider) {
+    AuthProvider authProvider,
+    BabyProvider babyProvider,
+    EventProvider eventProvider,
+  ) {
     final userId = authProvider.user?.id;
     if (userId != null) {
       _revenueCatLogIn(userId);
@@ -266,18 +276,20 @@ class _AppNavigatorState extends State<_AppNavigator> {
 
       _pendingUpdate = null;
 
-      navigator.push(PageRouteBuilder(
-        opaque: false,
-        barrierDismissible: !update.isForceUpdate,
-        barrierColor: Colors.black54,
-        pageBuilder: (_, __, ___) => UpdateModal(
-          latestVersion: update.latestVersion,
-          releaseNotes: update.releaseNotes,
-          storeUrl: update.storeUrl,
-          isForceUpdate: update.isForceUpdate,
-          onDismiss: () => navigator.pop(),
+      navigator.push(
+        PageRouteBuilder(
+          opaque: false,
+          barrierDismissible: !update.isForceUpdate,
+          barrierColor: Colors.black54,
+          pageBuilder: (_, _, _) => UpdateModal(
+            latestVersion: update.latestVersion,
+            releaseNotes: update.releaseNotes,
+            storeUrl: update.storeUrl,
+            isForceUpdate: update.isForceUpdate,
+            onDismiss: () => navigator.pop(),
+          ),
         ),
-      ));
+      );
     });
   }
 
@@ -294,9 +306,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
       theme: AppTheme.darkTheme,
       themeMode: ThemeMode.dark,
       home: authProvider.isLoggedIn ? _buildHome() : const LoginScreen(),
-      routes: {
-        '/home': (context) => const MainShell(),
-      },
+      routes: {'/home': (context) => const MainShell()},
     );
   }
 
@@ -304,9 +314,7 @@ class _AppNavigatorState extends State<_AppNavigator> {
     if (_showOnboarding == null) {
       return Scaffold(
         body: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.sleepPurple,
-          ),
+          child: CircularProgressIndicator(color: AppColors.sleepPurple),
         ),
       );
     }
@@ -328,7 +336,13 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentTab = 0;
   AnalyticsService? _analyticsService;
 
-  final _screenNames = const ['home', 'history', 'insights', 'profile'];
+  final _screenNames = const [
+    'home',
+    'history',
+    'insights',
+    'tips',
+    'profile',
+  ];
 
   static const int insightsTab = 2;
 
@@ -341,10 +355,14 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     NavigationService.tabIndex.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _analyticsService ??=
-          AnalyticsService(context.read<AuthProvider>().authService);
-      _analyticsService?.log(AnalyticsService.appOpen, AnalyticsService.engagement,
-          properties: {'source': 'cold_start'});
+      _analyticsService ??= AnalyticsService(
+        context.read<AuthProvider>().authService,
+      );
+      _analyticsService?.log(
+        AnalyticsService.appOpen,
+        AnalyticsService.engagement,
+        properties: {'source': 'cold_start'},
+      );
       _maybeShowAutoPaywall(trigger: PaywallTriggerPoint.appColdStart);
     });
   }
@@ -355,8 +373,12 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     _babyProvider?.removeListener(_onBabyChanged);
     _babyProvider = context.read<BabyProvider>();
     _babyProvider!.addListener(_onBabyChanged);
-    _analyticsService ??= AnalyticsService(context.read<AuthProvider>().authService);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadEventsForCurrentBaby());
+    _analyticsService ??= AnalyticsService(
+      context.read<AuthProvider>().authService,
+    );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _loadEventsForCurrentBaby(),
+    );
   }
 
   @override
@@ -371,16 +393,19 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state != AppLifecycleState.resumed) return;
-    _analyticsService?.log(AnalyticsService.appResumed, AnalyticsService.engagement,
-        properties: {'source': 'resumed'});
+    _analyticsService?.log(
+      AnalyticsService.appResumed,
+      AnalyticsService.engagement,
+      properties: {'source': 'resumed'},
+    );
     _maybeShowAutoPaywall(trigger: PaywallTriggerPoint.appResume);
   }
 
-  /// Avalia o paywall automatico. O throttling impede que vire assedio:
-  /// cooldown, limite por dia, carencia de instalacao e bloqueio quando ha
-  /// timer de sono ativo. Veja [PaywallTriggerService] para as regras.
+  /// Avalia o paywall automatico. Os limites de frequencia e o timer de sono
+  /// ativo evitam interrupcoes excessivas. Veja [PaywallTriggerService].
   Future<void> _maybeShowAutoPaywall({required String trigger}) async {
-    final sleepTimerActive = context.read<EventProvider>().activeSleepTimer != null;
+    final sleepTimerActive =
+        context.read<EventProvider>().activeSleepTimer != null;
 
     // Da tempo da UI assentar e evita competir com modais de update/review.
     await Future<void>.delayed(const Duration(milliseconds: 800));
@@ -398,9 +423,11 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   void _onTabChanged() {
     if (mounted) {
       setState(() => _currentTab = NavigationService.tabIndex.value);
-      _analyticsService?.log(AnalyticsService.screenView, AnalyticsService.engagement, properties: {
-        'screen': _screenNames[_currentTab],
-      });
+      _analyticsService?.log(
+        AnalyticsService.screenView,
+        AnalyticsService.engagement,
+        properties: {'screen': _screenNames[_currentTab]},
+      );
       if (_screenNames[_currentTab] == 'insights') {
         MetaAdsService.instance.logViewInsights();
       }
@@ -427,15 +454,16 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       body: IndexedStack(
         index: _currentTab,
         children: [
-          const HomeScreen(),
+          HomeScreen(isActive: _currentTab == 0),
           const HistoryScreen(),
           InsightsScreen(isActive: _currentTab == insightsTab),
+          const TipsScreen(),
           const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: _NavBar(
         currentTab: _currentTab,
-        onTabChanged: (index) => setState(() => _currentTab = index),
+        onTabChanged: NavigationService.goToTab,
       ),
     );
   }
@@ -445,10 +473,7 @@ class _NavBar extends StatelessWidget {
   final int currentTab;
   final ValueChanged<int> onTabChanged;
 
-  const _NavBar({
-    required this.currentTab,
-    required this.onTabChanged,
-  });
+  const _NavBar({required this.currentTab, required this.onTabChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -459,9 +484,7 @@ class _NavBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardDark.withValues(alpha: 0.98),
         border: Border(
-          top: BorderSide(
-            color: AppColors.cardBorder.withValues(alpha: 0.2),
-          ),
+          top: BorderSide(color: AppColors.cardBorder.withValues(alpha: 0.2)),
         ),
       ),
       child: SafeArea(
@@ -494,11 +517,18 @@ class _NavBar extends StatelessWidget {
                 onTap: () => onTabChanged(2),
               ),
               _NavBarItem(
+                icon: Icons.lightbulb_outline_rounded,
+                activeIcon: Icons.lightbulb_rounded,
+                label: context.read<LocaleProvider>().strings.navTips,
+                isSelected: currentTab == 3,
+                onTap: () => onTabChanged(3),
+              ),
+              _NavBarItem(
                 icon: Icons.person_outline,
                 activeIcon: Icons.person_rounded,
                 label: context.read<LocaleProvider>().strings.navProfile,
-                isSelected: currentTab == 3,
-                onTap: () => onTabChanged(3),
+                isSelected: currentTab == 4,
+                onTap: () => onTabChanged(4),
               ),
             ],
           ),
@@ -527,26 +557,20 @@ class _NavBarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected
-        ? AppColors.sleepPurple
-        : AppColors.textTertiary;
+    final color = isSelected ? AppColors.sleepPurple : AppColors.textTertiary;
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  color: color,
-                  size: 24,
-                ),
+                Icon(isSelected ? activeIcon : icon, color: color, size: 24),
                 const SizedBox(height: 2),
                 Text(
                   label,

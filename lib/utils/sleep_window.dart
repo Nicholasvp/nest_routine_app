@@ -60,5 +60,11 @@ class SleepBatteryCalculator {
     return (window.maxMinutes - elapsedMinutesSinceWake).clamp(0, 999);
   }
 
+  /// Estimated time until the beginning of the age-based sleep window.
+  int get minutesUntilSleepy {
+    if (isCurrentlySleeping || lastWakeUp == null) return 0;
+    return (window.minMinutes - elapsedMinutesSinceWake).clamp(0, 999);
+  }
+
 
 }
